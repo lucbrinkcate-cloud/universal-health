@@ -83,10 +83,60 @@ export type RootStackParamList = {
   Register: undefined;
   ForgotPassword: undefined;
   Main: undefined;
+  BodyRegionDetail: { region: BodyRegion };
 };
 
 export type MainTabParamList = {
   Dashboard: undefined;
+  DigitalTwin: undefined;
   Devices: undefined;
   Profile: undefined;
 };
+
+export type BodyRegion = 
+  | 'cardiovascular'
+  | 'respiratory'
+  | 'musculoskeletal'
+  | 'nervous'
+  | 'digestive'
+  | 'endocrine'
+  | 'immune'
+  | 'general';
+
+export type HealthStatus = 'good' | 'warning' | 'alert';
+
+export interface BodyRegionData {
+  region: BodyRegion;
+  name: string;
+  status: HealthStatus;
+  score: number;
+  metrics: RegionMetric[];
+}
+
+export interface RegionMetric {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  status: HealthStatus;
+  score: number;
+  range: {
+    min: number;
+    max: number;
+    optimal: number;
+  };
+}
+
+export interface ExtendedHealthData extends HealthData {
+  spo2: number;
+  stressLevel: number;
+  hrv: number;
+  respiratoryRate: number;
+  bodyTemperature: number;
+  bloodPressure?: {
+    systolic: number;
+    diastolic: number;
+  };
+  bodyRegionData: BodyRegionData[];
+  overallHealthScore: number;
+}

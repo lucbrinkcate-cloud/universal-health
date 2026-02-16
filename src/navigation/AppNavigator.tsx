@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LoginScreen, RegisterScreen, ForgotPasswordScreen } from '../screens/auth';
-import { DashboardScreen, DevicesScreen } from '../screens/main';
+import { DashboardScreen, DigitalTwinScreen, DevicesScreen } from '../screens/main';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
 import { useAuthStore } from '../stores';
 import { COLORS, SPACING, FONT_SIZE } from '../constants';
@@ -16,8 +16,9 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }) => {
   const icons: Record<string, string> = {
     Dashboard: '🏠',
+    DigitalTwin: '👤',
     Devices: '📱',
-    Profile: '👤',
+    Profile: '⚙️',
   };
   return (
     <View style={styles.tabIconContainer}>
@@ -46,6 +47,11 @@ const MainTabs: React.FC = () => {
         name="Dashboard" 
         component={DashboardScreen}
         options={{ title: 'Dashboard' }}
+      />
+      <Tab.Screen 
+        name="DigitalTwin" 
+        component={DigitalTwinScreen}
+        options={{ title: 'My Twin' }}
       />
       <Tab.Screen 
         name="Devices" 

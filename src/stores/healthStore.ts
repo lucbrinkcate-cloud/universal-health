@@ -1,32 +1,39 @@
 import { create } from 'zustand';
-import { HealthData, TerraProvider } from '../types';
+import { HealthData, TerraProvider, ExtendedHealthData, BodyRegion } from '../types';
 import terraService from '../services/terra';
+import { createExtendedHealthData } from '../utils/healthScoreEngine';
 
 interface HealthStore {
   healthData: HealthData | null;
+  extendedHealthData: ExtendedHealthData | null;
   isLoading: boolean;
   error: string | null;
   connectedDevices: TerraProvider[];
+  selectedRegion: BodyRegion | null;
   fetchHealthData: (date?: string) => Promise<void>;
   fetchConnectedDevices: () => Promise<void>;
   connectDevice: (providerId: string) => Promise<string>;
   disconnectDevice: (providerId: string) => Promise<void>;
   clearError: () => void;
   useMockData: () => void;
+  setSelectedRegion: (region: BodyRegion | null) => void;
 }
 
 export const useHealthStore = create<HealthStore>((set, get) => ({
   healthData: null,
+  extendedHealthData: null,
   isLoading: false,
   error: null,
   connectedDevices: [],
+  selectedRegion: null,
 
   fetchHealthData: async (date?: string) => {
     set({ isLoading: true, error: null });
     try {
       const targetDate = date || new Date().toISOString().split('T')[0];
       const data = await terraService.getHealthSummary(targetDate);
-      set({ healthData: data, isLoading: false });
+      const extendedData = createExtendedHealthData(data);
+      set({ healthData: data, extendedHealthData: extendedData, isLoading: false });
     } catch (error: unknown) {
       const err = error as { message?: string };
       set({
@@ -84,8 +91,11 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
 
   useMockData: () => {
     const mockData = terraService.generateMockHealthData();
-    set({ healthData: mockData, isLoading: false });
+    const extendedData = createExtendedHealthData(mockData);
+    set({ healthData: mockData, extendedHealthData: extendedData, isLoading: false });
   },
+
+  setSelectedRegion: (region: BodyRegion | null) => set({ selectedRegion: region }),
 }));
 
 export default useHealthStore;

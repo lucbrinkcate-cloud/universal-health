@@ -4,3 +4,6 @@ export { HealthCard } from './HealthCard';
 export { Loading } from './Loading';
 export { ErrorView } from './ErrorView';
 export { SleepChart } from './SleepChart';
+export { DigitalTwinAvatar } from './DigitalTwinAvatar';
+export { BiometricDisplay } from './BiometricDisplay';
+export { BodyRegionDetail } from './BodyRegionDetail';
