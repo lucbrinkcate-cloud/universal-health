@@ -91,6 +91,8 @@ export type MainTabParamList = {
   DigitalTwin: undefined;
   Devices: undefined;
   Profile: undefined;
+  Gamification: undefined;
+  Biometrics: undefined;
 };
 
 export type BodyRegion = 
@@ -139,4 +141,75 @@ export interface ExtendedHealthData extends HealthData {
   };
   bodyRegionData: BodyRegionData[];
   overallHealthScore: number;
+}
+
+export interface UserProgress {
+  level: number;
+  xp: number;
+  xpToNextLevel: number;
+  totalXp: number;
+  streak: number;
+  lastActiveDate: string;
+}
+
+export interface Currency {
+  coins: number;
+  gems: number;
+}
+
+export type AchievementCategory = 
+  | 'steps'
+  | 'sleep'
+  | 'heart'
+  | 'streak'
+  | 'social'
+  | 'collection';
+
+export type AchievementTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  category: AchievementCategory;
+  tier: AchievementTier;
+  icon: string;
+  requirement: number;
+  reward: {
+    xp: number;
+    coins: number;
+  };
+  unlockedAt?: string;
+  progress: number;
+}
+
+export interface AvatarState {
+  mood: 'happy' | 'neutral' | 'tired' | 'sick' | 'energized';
+  energy: number;
+  health: number;
+  lastFed: string;
+  lastExercised: string;
+  accessories: string[];
+  evolutionStage: number;
+}
+
+export interface DailyChallenge {
+  id: string;
+  title: string;
+  description: string;
+  type: 'steps' | 'sleep' | 'heart' | 'hydration' | 'meditation';
+  target: number;
+  current: number;
+  reward: {
+    xp: number;
+    coins: number;
+  };
+  completed: boolean;
+  expiresAt: string;
+}
+
+export interface XPGain {
+  amount: number;
+  reason: string;
+  timestamp: string;
 }

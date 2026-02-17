@@ -6,18 +6,34 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
-import { useHealthStore } from '../../stores';
-import { HealthCard, SleepChart, Loading, ErrorView } from '../../components';
+import { useHealthStore, useGamificationStore } from '../../stores';
+import { HealthCard, SleepChart, Loading, ErrorView, ProgressCard, DailyChallenges } from '../../components';
 import { COLORS, SPACING, FONT_SIZE } from '../../constants';
 import { formatTime, getRelativeTime } from '../../utils';
 
 export const DashboardScreen: React.FC = () => {
   const { healthData, isLoading, error, fetchHealthData, useMockData, clearError } =
     useHealthStore();
+  const { checkAchievements, updateAvatarState, updateChallengeProgress } = useGamificationStore();
 
   useEffect(() => {
     fetchHealthData();
   }, []);
+
+  // Check achievements when health data updates
+  useEffect(() => {
+    if (healthData) {
+      checkAchievements(healthData);
+      updateAvatarState(healthData);
+      
+      // Update challenge progress
+      updateChallengeProgress('steps_10k', healthData.steps);
+      updateChallengeProgress('sleep_8h', healthData.sleepData.totalMinutes);
+      if (healthData.heartRate >= 60 && healthData.heartRate <= 80) {
+        updateChallengeProgress('heart_healthy', 1);
+      }
+    }
+  }, [healthData]);
 
   const onRefresh = () => {
     fetchHealthData();
@@ -51,6 +67,12 @@ export const DashboardScreen: React.FC = () => {
         <RefreshControl refreshing={isLoading} onRefresh={onRefresh} />
       }
     >
+      <ProgressCard />
+
+      <View style={styles.section}>
+        <DailyChallenges />
+      </View>
+
       <View style={styles.header}>
         <Text style={styles.greeting}>Today's Health</Text>
         <Text style={styles.lastUpdated}>

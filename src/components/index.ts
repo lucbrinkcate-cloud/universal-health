@@ -7,3 +7,6 @@ export { SleepChart } from './SleepChart';
 export { DigitalTwinAvatar } from './DigitalTwinAvatar';
 export { BiometricDisplay } from './BiometricDisplay';
 export { BodyRegionDetail } from './BodyRegionDetail';
+export { ProgressCard } from './ProgressCard';
+export { AchievementsList } from './AchievementsList';
+export { DailyChallenges } from './DailyChallenges';

@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LoginScreen, RegisterScreen, ForgotPasswordScreen } from '../screens/auth';
-import { DashboardScreen, DigitalTwinScreen, DevicesScreen } from '../screens/main';
+import { DashboardScreen, DigitalTwinScreen, DevicesScreen, GamificationScreen, BiometricsScreen } from '../screens/main';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
 import { useAuthStore } from '../stores';
 import { COLORS, SPACING, FONT_SIZE } from '../constants';
@@ -19,6 +19,8 @@ const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }
     DigitalTwin: '👤',
     Devices: '📱',
     Profile: '⚙️',
+    Gamification: '🏆',
+    Biometrics: '📊',
   };
   return (
     <View style={styles.tabIconContainer}>
@@ -54,9 +56,19 @@ const MainTabs: React.FC = () => {
         options={{ title: 'My Twin' }}
       />
       <Tab.Screen 
+        name="Biometrics" 
+        component={BiometricsScreen}
+        options={{ title: 'Biometrics' }}
+      />
+      <Tab.Screen 
         name="Devices" 
         component={DevicesScreen}
         options={{ title: 'Devices' }}
+      />
+      <Tab.Screen 
+        name="Gamification" 
+        component={GamificationScreen}
+        options={{ title: 'Rewards' }}
       />
       <Tab.Screen 
         name="Profile" 
