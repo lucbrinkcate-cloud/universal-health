@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { HealthData, TerraProvider, ExtendedHealthData, BodyRegion } from '../types';
-import terraService from '../services/terra';
 import { nativeHealthService } from '../services/nativeHealth';
 import { createExtendedHealthData } from '../utils/healthScoreEngine';
 import { deduplicationEngine } from '../utils/deduplication';
@@ -38,54 +37,34 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
     try {
       const targetDate = date || new Date().toISOString().split('T')[0];
       
-      // Fetch data from multiple sources
-      const dataSources: Array<{ data: HealthData; source: string }> = [];
+      // Initialize native health service
+      const isNativeAvailable = await get().initializeNativeHealth();
       
-      // Fetch from Terra API
-      try {
-        const terraData = await terraService.getHealthSummary(targetDate);
-        dataSources.push({ data: terraData, source: 'terra' });
-      } catch (e) {
-        console.log('Terra data unavailable');
-      }
-      
-      // Fetch from native health (HealthKit/Health Connect) if available
-      if (get().nativeHealthAvailable) {
-        try {
-          const nativeData = await get().fetchNativeHealthData(targetDate);
-          if (nativeData) {
-            const sourceName = nativeHealthService.isAvailable() ? 
-              (nativeHealthService as any).platform === 'ios' ? 'healthkit' : 'health_connect'
-              : 'native';
-            dataSources.push({ data: nativeData, source: sourceName });
-          }
-        } catch (e) {
-          console.log('Native health data unavailable');
+      // Fetch data from native health if available
+      if (isNativeAvailable) {
+        const nativeData = await get().fetchNativeHealthData(targetDate);
+        if (nativeData) {
+          set({
+            healthData: nativeData,
+            extendedHealthData: createExtendedHealthData(nativeData),
+            isLoading: false,
+            nativeHealthAvailable: true,
+          });
+          return;
         }
       }
       
-      // Merge and de-duplicate data
-      let finalData: HealthData;
-      if (dataSources.length === 0) {
-        throw new Error('No health data sources available');
-      } else if (dataSources.length === 1) {
-        finalData = dataSources[0].data;
-      } else {
-        finalData = deduplicationEngine.mergeHealthData(dataSources);
-      }
-      
-      // Validate data quality
-      const validation = deduplicationEngine.validateData(finalData, 'merged');
-      if (!validation.valid) {
-        console.warn('Data quality issues detected:', validation.issues);
-      }
-      
-      const extendedData = createExtendedHealthData(finalData);
-      set({ healthData: finalData, extendedHealthData: extendedData, isLoading: false });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
+      // If native health not available, use mock data
+      const mockData = nativeHealthService.generateMockHealthData();
       set({
-        error: err.message || 'Failed to fetch health data',
+        healthData: mockData,
+        extendedHealthData: createExtendedHealthData(mockData),
+        isLoading: false,
+        nativeHealthAvailable: false,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to fetch health data',
         isLoading: false,
       });
     }
@@ -94,12 +73,17 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   fetchConnectedDevices: async () => {
     set({ isLoading: true, error: null });
     try {
-      const devices = await terraService.getConnectedDevices();
-      set({ connectedDevices: devices, isLoading: false });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
+      // For native health, we don't have connected devices in the same way
+      // But we can check what's available
+      const isAvailable = await nativeHealthService.initialize();
+      
       set({
-        error: err.message || 'Failed to fetch devices',
+        connectedDevices: isAvailable ? [{ id: 'native', name: 'Native Health' }] : [],
+        isLoading: false,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to fetch devices',
         isLoading: false,
       });
     }
@@ -108,13 +92,20 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   connectDevice: async (providerId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const result = await terraService.connectProvider(providerId);
-      set({ isLoading: false });
-      return result.url;
-    } catch (error: unknown) {
-      const err = error as { message?: string };
+      if (providerId === 'native') {
+        const isAvailable = await nativeHealthService.initialize();
+        if (isAvailable) {
+          const isPermissionGranted = await nativeHealthService.requestPermissions();
+          if (isPermissionGranted) {
+            set({ nativeHealthAvailable: true });
+            return 'native';
+          }
+        }
+      }
+      throw new Error('Failed to connect device');
+    } catch (error) {
       set({
-        error: err.message || 'Failed to connect device',
+        error: error instanceof Error ? error.message : 'Failed to connect device',
         isLoading: false,
       });
       throw error;
@@ -124,34 +115,25 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   disconnectDevice: async (providerId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const devices = get().connectedDevices.filter(d => d.id !== providerId);
-      set({ connectedDevices: devices, isLoading: false });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
+      if (providerId === 'native') {
+        // For native health, we don't really disconnect, just reset
+        set({ nativeHealthAvailable: false });
+      }
+      set({ isLoading: false });
+    } catch (error) {
       set({
-        error: err.message || 'Failed to disconnect device',
+        error: error instanceof Error ? error.message : 'Failed to disconnect device',
         isLoading: false,
       });
     }
   },
 
-  clearError: () => set({ error: null }),
-
-  useMockData: () => {
-    const mockData = terraService.generateMockHealthData();
-    const extendedData = createExtendedHealthData(mockData);
-    set({ healthData: mockData, extendedHealthData: extendedData, isLoading: false });
-  },
-
-  setSelectedRegion: (region: BodyRegion | null) => set({ selectedRegion: region }),
-
   initializeNativeHealth: async () => {
     try {
-      const initialized = await nativeHealthService.initialize();
-      if (initialized) {
-        const permissions = await nativeHealthService.requestPermissions();
-        set({ nativeHealthAvailable: permissions });
-        return permissions;
+      const isAvailable = await nativeHealthService.initialize();
+      if (isAvailable) {
+        const isPermissionGranted = await nativeHealthService.requestPermissions();
+        return isPermissionGranted;
       }
       return false;
     } catch (error) {
@@ -163,17 +145,30 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   fetchNativeHealthData: async (date?: string) => {
     try {
       const targetDate = date || new Date().toISOString().split('T')[0];
-      const startDate = new Date(targetDate);
-      const endDate = new Date(targetDate);
-      endDate.setDate(endDate.getDate() + 1);
-
-      const data = await nativeHealthService.getHealthData(startDate, endDate);
-      return data;
+      const healthData = await nativeHealthService.getHealthData(
+        new Date(targetDate),
+        new Date(targetDate)
+      );
+      return healthData;
     } catch (error) {
       console.error('Failed to fetch native health data:', error);
       return null;
     }
   },
+
+  clearError: () => set({ error: null }),
+
+  useMockData: () => {
+    const mockData = nativeHealthService.generateMockHealthData();
+    set({
+      healthData: mockData,
+      extendedHealthData: createExtendedHealthData(mockData),
+      isLoading: false,
+      nativeHealthAvailable: false,
+    });
+  },
+
+  setSelectedRegion: (region: BodyRegion | null) => set({ selectedRegion: region }),
 }));
 
 export default useHealthStore;

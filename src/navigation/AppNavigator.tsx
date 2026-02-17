@@ -6,9 +6,18 @@ import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LoginScreen, RegisterScreen, ForgotPasswordScreen } from '../screens/auth';
 import { DashboardScreen, DigitalTwinScreen, DevicesScreen, GamificationScreen, BiometricsScreen } from '../screens/main';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
-import { useAuthStore } from '../stores';
+import { useHealthStore } from '../stores';
 import { COLORS, SPACING, FONT_SIZE } from '../constants';
 import { RootStackParamList, MainTabParamList, User } from '../types';
+
+// Mock authentication state for development
+const mockUser: User = {
+  uid: 'mock-user-123',
+  email: 'test@example.com',
+  displayName: 'Test User',
+  photoURL: null,
+  createdAt: new Date().toISOString()
+};
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -103,18 +112,25 @@ const AuthStack: React.FC = () => {
 };
 
 export const AppNavigator: React.FC = () => {
-  const { user, isAuthenticated, initialize } = useAuthStore();
+  const { fetchHealthData, fetchConnectedDevices } = useHealthStore();
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = initialize() as (() => void) | undefined;
-    setIsInitialized(true);
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
+    const initializeApp = async () => {
+      try {
+        // Initialize native health service
+        await fetchConnectedDevices();
+        // Fetch initial health data
+        await fetchHealthData();
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+      } finally {
+        setIsInitialized(true);
       }
     };
-  }, [initialize]);
+
+    initializeApp();
+  }, [fetchHealthData, fetchConnectedDevices]);
 
   if (!isInitialized) {
     return (
@@ -127,11 +143,7 @@ export const AppNavigator: React.FC = () => {
 
   return (
     <NavigationContainer>
-      {isAuthenticated && user ? (
-        <MainTabs />
-      ) : (
-        <AuthStack />
-      )}
+      <MainTabs />
     </NavigationContainer>
   );
 };
