@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "824606371561",
+    "project_id": "universal-health-aed00",
+    "storage_bucket": "universal-health-aed00.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:824606371561:android:fff0d2a7d8d1a1ca75ca78",
+        "android_client_info": {
+          "package_name": "universal.healt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYd9InUm8Xc8OnBaxF2YKFr6cf8k0NeKc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
