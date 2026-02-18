@@ -4,3 +4,5 @@ export { DevicesScreen } from './DevicesScreen';
 export { ProfileScreen } from './ProfileScreen';
 export { GamificationScreen } from './GamificationScreen';
 export { BiometricsScreen } from './BiometricsScreen';
+export { FriendsScreen } from './FriendsScreen';
+export { LeaderboardScreen } from './LeaderboardScreen';

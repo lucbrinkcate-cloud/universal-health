@@ -1,3 +1,5 @@
 export { useAuthStore } from './authStore';
 export { useHealthStore } from './healthStore';
 export { useGamificationStore } from './gamificationStore';
+export { useSocialStore } from './socialStore';
+export { useLeaderboardStore } from './leaderboardStore';

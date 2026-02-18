@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LoginScreen, RegisterScreen, ForgotPasswordScreen } from '../screens/auth';
-import { DashboardScreen, DigitalTwinScreen, DevicesScreen, GamificationScreen, BiometricsScreen } from '../screens/main';
+import { DashboardScreen, DigitalTwinScreen, DevicesScreen, GamificationScreen, BiometricsScreen, FriendsScreen, LeaderboardScreen } from '../screens/main';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
 import { useHealthStore } from '../stores';
 import { COLORS, SPACING, FONT_SIZE } from '../constants';
@@ -30,6 +30,8 @@ const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }
     Profile: '⚙️',
     Gamification: '🏆',
     Biometrics: '📊',
+    Friends: '👥',
+    Leaderboard: '🏅',
   };
   return (
     <View style={styles.tabIconContainer}>
@@ -83,6 +85,16 @@ const MainTabs: React.FC = () => {
         name="Profile" 
         component={ProfileScreen}
         options={{ title: 'Profile' }}
+      />
+      <Tab.Screen 
+        name="Friends" 
+        component={FriendsScreen}
+        options={{ title: 'Friends' }}
+      />
+      <Tab.Screen 
+        name="Leaderboard" 
+        component={LeaderboardScreen}
+        options={{ title: 'Leaderboard' }}
       />
     </Tab.Navigator>
   );

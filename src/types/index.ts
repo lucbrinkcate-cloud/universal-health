@@ -93,6 +93,8 @@ export type MainTabParamList = {
   Profile: undefined;
   Gamification: undefined;
   Biometrics: undefined;
+  Friends: undefined;
+  Leaderboard: undefined;
 };
 
 export type BodyRegion = 
