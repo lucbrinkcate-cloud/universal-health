@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LoginScreen, RegisterScreen, ForgotPasswordScreen } from '../screens/auth';
-import { DashboardScreen, DigitalTwinScreen, DevicesScreen, GamificationScreen, BiometricsScreen, FriendsScreen, LeaderboardScreen } from '../screens/main';
+import { DashboardScreen, DigitalTwinScreen, DevicesScreen, GamificationScreen, BiometricsScreen, FriendsScreen, LeaderboardScreen, AnalyticsScreen } from '../screens/main';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
 import { useHealthStore } from '../stores';
 import { COLORS, SPACING, FONT_SIZE } from '../constants';
@@ -32,6 +32,7 @@ const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }
     Biometrics: '📊',
     Friends: '👥',
     Leaderboard: '🏅',
+    Analytics: '📈',
   };
   return (
     <View style={styles.tabIconContainer}>
@@ -95,6 +96,11 @@ const MainTabs: React.FC = () => {
         name="Leaderboard" 
         component={LeaderboardScreen}
         options={{ title: 'Leaderboard' }}
+      />
+      <Tab.Screen 
+        name="Analytics" 
+        component={AnalyticsScreen}
+        options={{ title: 'Analytics' }}
       />
     </Tab.Navigator>
   );
