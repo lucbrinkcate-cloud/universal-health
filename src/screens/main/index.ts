@@ -6,3 +6,4 @@ export { GamificationScreen } from './GamificationScreen';
 export { BiometricsScreen } from './BiometricsScreen';
 export { FriendsScreen } from './FriendsScreen';
 export { LeaderboardScreen } from './LeaderboardScreen';
+export { AnalyticsScreen } from './AnalyticsScreen';
