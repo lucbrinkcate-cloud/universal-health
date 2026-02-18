@@ -96,6 +96,7 @@ export type MainTabParamList = {
   Friends: undefined;
   Leaderboard: undefined;
   Analytics: undefined;
+  Notifications: undefined;
 };
 
 export type BodyRegion = 
@@ -216,3 +217,5 @@ export interface XPGain {
   reason: string;
   timestamp: string;
 }
+
+export * from './notifications';

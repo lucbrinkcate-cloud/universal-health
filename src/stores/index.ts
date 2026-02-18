@@ -4,3 +4,4 @@ export { useGamificationStore } from './gamificationStore';
 export { useSocialStore } from './socialStore';
 export { useLeaderboardStore } from './leaderboardStore';
 export { useAnalyticsStore } from './analyticsStore';
+export { useNotificationsStore } from './notificationsStore';

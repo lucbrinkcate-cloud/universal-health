@@ -7,3 +7,4 @@ export { BiometricsScreen } from './BiometricsScreen';
 export { FriendsScreen } from './FriendsScreen';
 export { LeaderboardScreen } from './LeaderboardScreen';
 export { AnalyticsScreen } from './AnalyticsScreen';
+export { NotificationsScreen } from './NotificationsScreen';
