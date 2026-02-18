@@ -3,6 +3,8 @@ import { HealthData, TerraProvider, ExtendedHealthData, BodyRegion } from '../ty
 import { nativeHealthService } from '../services/nativeHealth';
 import { createExtendedHealthData } from '../utils/healthScoreEngine';
 
+type ProviderId = 'native' | string;
+
 enum HealthErrorCode {
   INITIALIZATION_FAILED = 'INITIALIZATION_FAILED',
   PERMISSION_DENIED = 'PERMISSION_DENIED',
@@ -13,22 +15,6 @@ enum HealthErrorCode {
   UNKNOWN = 'UNKNOWN',
 }
 
-interface HealthStoreError {
-  code: HealthErrorCode;
-  message: string;
-}
-
-const getErrorCode = (error: unknown): HealthErrorCode => {
-  if (error instanceof Error) {
-    if (error.message.includes('permission')) return HealthErrorCode.PERMISSION_DENIED;
-    if (error.message.includes('initialize')) return HealthErrorCode.INITIALIZATION_FAILED;
-    if (error.message.includes('fetch') || error.message.includes('data')) return HealthErrorCode.DATA_FETCH_FAILED;
-    if (error.message.includes('connect')) return HealthErrorCode.DEVICE_CONNECTION_FAILED;
-    if (error.message.includes('disconnect')) return HealthErrorCode.DEVICE_DISCONNECTION_FAILED;
-  }
-  return HealthErrorCode.UNKNOWN;
-};
-
 const formatErrorMessage = (error: unknown, defaultMessage: string): string => {
   if (error instanceof Error) {
     return `${defaultMessage}: ${error.message}`;
@@ -36,18 +22,23 @@ const formatErrorMessage = (error: unknown, defaultMessage: string): string => {
   return defaultMessage;
 };
 
+const isValidDateString = (date: string): boolean => {
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  return regex.test(date) && !isNaN(Date.parse(date));
+};
+
 interface HealthStore {
   healthData: HealthData | null;
   extendedHealthData: ExtendedHealthData | null;
   isLoading: boolean;
   error: string | null;
-  connectedDevices: TerraProvider[];
+  connectedDevices: readonly TerraProvider[];
   selectedRegion: BodyRegion | null;
   nativeHealthAvailable: boolean;
   fetchHealthData: (date?: string) => Promise<void>;
   fetchConnectedDevices: () => Promise<void>;
-  connectDevice: (providerId: string) => Promise<string>;
-  disconnectDevice: (providerId: string) => Promise<void>;
+  connectDevice: (providerId: ProviderId) => Promise<ProviderId>;
+  disconnectDevice: (providerId: ProviderId) => Promise<void>;
   initializeNativeHealth: () => Promise<boolean>;
   fetchNativeHealthData: (date?: string) => Promise<HealthData | null>;
   clearError: () => void;
@@ -96,7 +87,7 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
       });
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch health data',
+        error: formatErrorMessage(error, 'Failed to fetch health data'),
         isLoading: false,
       });
     }
@@ -105,8 +96,6 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   fetchConnectedDevices: async () => {
     set({ isLoading: true, error: null });
     try {
-      // For native health, we don't have connected devices in the same way
-      // But we can check what's available
       const isAvailable = await nativeHealthService.initialize();
       
       set({
@@ -121,7 +110,7 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
       });
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch devices',
+        error: formatErrorMessage(error, 'Failed to fetch devices'),
         isLoading: false,
       });
     }
@@ -138,12 +127,20 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
             set({ nativeHealthAvailable: true });
             return 'native';
           }
+          set({ error: 'Permission denied. Please grant health data access.', isLoading: false });
+          throw new Error('Health data permission denied');
         }
+        set({ error: 'Native health service unavailable on this device', isLoading: false });
+        throw new Error('Native health service unavailable');
       }
-      throw new Error('Failed to connect device');
+      set({ error: `Device with ID ${providerId} not found`, isLoading: false });
+      throw new Error('Device not found');
     } catch (error) {
+      if ((error as Error).message === 'Device not found' || (error as Error).message.includes('unavailable') || (error as Error).message.includes('denied')) {
+        throw error;
+      }
       set({
-        error: error instanceof Error ? error.message : 'Failed to connect device',
+        error: formatErrorMessage(error, 'Failed to connect device'),
         isLoading: false,
       });
       throw error;
@@ -154,13 +151,12 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       if (providerId === 'native') {
-        // For native health, we don't really disconnect, just reset
         set({ nativeHealthAvailable: false });
       }
       set({ isLoading: false });
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to disconnect device',
+        error: formatErrorMessage(error, 'Failed to disconnect device'),
         isLoading: false,
       });
     }
