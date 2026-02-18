@@ -6,6 +6,35 @@ class NativeHealthService {
   private isInitialized: boolean = false;
   private platform: 'ios' | 'android' | 'web' = Platform.OS as 'ios' | 'android' | 'web';
 
+  generateMockHealthData(): HealthData {
+    const now = new Date();
+    const heartRateReadings: HeartRateReading[] = [];
+    
+    for (let i = 0; i < 24; i++) {
+      const time = new Date(now);
+      time.setHours(time.getHours() - i);
+      heartRateReadings.push({
+        timestamp: time.toISOString(),
+        value: Math.floor(Math.random() * (85 - 55 + 1)) + 55,
+      });
+    }
+
+    return {
+      steps: Math.floor(Math.random() * 12000) + 3000,
+      heartRate: Math.floor(Math.random() * (75 - 60 + 1)) + 60,
+      heartRateData: heartRateReadings.reverse(),
+      sleepData: {
+        totalMinutes: Math.floor(Math.random() * 120) + 360,
+        deepMinutes: Math.floor(Math.random() * 60) + 60,
+        lightMinutes: Math.floor(Math.random() * 120) + 180,
+        remMinutes: Math.floor(Math.random() * 60) + 60,
+        awakeMinutes: Math.floor(Math.random() * 30) + 10,
+        score: Math.floor(Math.random() * 30) + 70,
+      },
+      lastUpdated: new Date().toISOString(),
+    };
+  }
+
   async initialize(): Promise<boolean> {
     try {
       if (this.platform === 'ios') {

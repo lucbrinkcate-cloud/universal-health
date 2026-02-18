@@ -2,7 +2,39 @@ import { create } from 'zustand';
 import { HealthData, TerraProvider, ExtendedHealthData, BodyRegion } from '../types';
 import { nativeHealthService } from '../services/nativeHealth';
 import { createExtendedHealthData } from '../utils/healthScoreEngine';
-import { deduplicationEngine } from '../utils/deduplication';
+
+enum HealthErrorCode {
+  INITIALIZATION_FAILED = 'INITIALIZATION_FAILED',
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
+  DATA_FETCH_FAILED = 'DATA_FETCH_FAILED',
+  DEVICE_NOT_FOUND = 'DEVICE_NOT_FOUND',
+  DEVICE_CONNECTION_FAILED = 'DEVICE_CONNECTION_FAILED',
+  DEVICE_DISCONNECTION_FAILED = 'DEVICE_DISCONNECTION_FAILED',
+  UNKNOWN = 'UNKNOWN',
+}
+
+interface HealthStoreError {
+  code: HealthErrorCode;
+  message: string;
+}
+
+const getErrorCode = (error: unknown): HealthErrorCode => {
+  if (error instanceof Error) {
+    if (error.message.includes('permission')) return HealthErrorCode.PERMISSION_DENIED;
+    if (error.message.includes('initialize')) return HealthErrorCode.INITIALIZATION_FAILED;
+    if (error.message.includes('fetch') || error.message.includes('data')) return HealthErrorCode.DATA_FETCH_FAILED;
+    if (error.message.includes('connect')) return HealthErrorCode.DEVICE_CONNECTION_FAILED;
+    if (error.message.includes('disconnect')) return HealthErrorCode.DEVICE_DISCONNECTION_FAILED;
+  }
+  return HealthErrorCode.UNKNOWN;
+};
+
+const formatErrorMessage = (error: unknown, defaultMessage: string): string => {
+  if (error instanceof Error) {
+    return `${defaultMessage}: ${error.message}`;
+  }
+  return defaultMessage;
+};
 
 interface HealthStore {
   healthData: HealthData | null;
@@ -78,7 +110,13 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
       const isAvailable = await nativeHealthService.initialize();
       
       set({
-        connectedDevices: isAvailable ? [{ id: 'native', name: 'Native Health' }] : [],
+        connectedDevices: isAvailable ? [{
+          id: 'native',
+          name: 'Native Health',
+          logo: 'heart',
+          description: 'Health data from your device',
+          status: 'connected' as const,
+        }] : [],
         isLoading: false,
       });
     } catch (error) {
