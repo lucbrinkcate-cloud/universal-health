@@ -1,3 +1,4 @@
+// Updated Digital Twin Avatar implementation
 import React, { useRef, useEffect, useCallback } from 'react';
 import {
   View,
