@@ -6,8 +6,11 @@ import {
   ScrollView,
   RefreshControl,
   Pressable,
+  Button,
+  TextInput,
 } from 'react-native';
 import { useHealthStore } from '../../stores';
+import { useAvatarStore } from '../../stores/avatarSlice';
 import { DigitalTwinAvatar } from '../../components/DigitalTwinAvatar';
 import { BiometricDisplay } from '../../components/BiometricDisplay';
 import { BodyRegionDetail } from '../../components/BodyRegionDetail';
