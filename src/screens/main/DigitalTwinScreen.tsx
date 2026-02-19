@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useHealthStore } from '../../stores';
 import { DigitalTwinAvatar } from '../../components/DigitalTwinAvatar';
+import { AvatarControls } from '../../components/avatar/AvatarControls';
 import { BiometricDisplay } from '../../components/BiometricDisplay';
 import { BodyRegionDetail } from '../../components/BodyRegionDetail';
 import { Loading, ErrorView } from '../../components';
