@@ -1,7 +1,7 @@
 // AvatarControls component – simple UI to tweak avatar settings
 import React from 'react';
 import { View, Text, TextInput, Switch, StyleSheet } from 'react-native';
-import { useAvatarStore } from '../../store/avatarStore';
+import { useAvatarStore } from '../../stores/avatarStore';
 
 export const AvatarControls: React.FC = () => {
   const {

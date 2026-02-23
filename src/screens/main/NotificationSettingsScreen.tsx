@@ -1,35 +1,33 @@
 import React from 'react';
 import { View, Text, Switch, StyleSheet } from 'react-native';
-import { useStore } from 'easy-peasy';
+import { useNotificationsStore } from '../../stores/notificationsStore';
 
-/**
- * Simple screen that lets the user toggle the three notification types
- * used in the app: achievements, daily challenges, and friend activity.
- */
 export default function NotificationSettingsScreen() {
-  const {
-    enableAchievements,
-    enableDaily,
-    enableFriends,
-    setEnableAchievements,
-    setEnableDaily,
-    setEnableFriends,
-  } = useStore(state => state.notificationsStore);
+  const { preferences, updatePreferences } = useNotificationsStore();
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Notification Settings</Text>
       <View style={styles.row}>
         <Text style={styles.label}>Achievements</Text>
-        <Switch value={enableAchievements} onValueChange={setEnableAchievements} />
+        <Switch
+          value={preferences.achievements}
+          onValueChange={(value) => updatePreferences({ achievements: value })}
+        />
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Daily Challenges</Text>
-        <Switch value={enableDaily} onValueChange={setEnableDaily} />
+        <Switch
+          value={preferences.dailyChallenges}
+          onValueChange={(value) => updatePreferences({ dailyChallenges: value })}
+        />
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Friend Activity</Text>
-        <Switch value={enableFriends} onValueChange={setEnableFriends} />
+        <Switch
+          value={preferences.friendActivity}
+          onValueChange={(value) => updatePreferences({ friendActivity: value })}
+        />
       </View>
     </View>
   );
