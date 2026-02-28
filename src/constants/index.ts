@@ -72,6 +72,12 @@ export const TERRA_CONFIG = {
   baseUrl: 'https://api.tryterra.co/v2',
 };
 
+export const STRAVA_CONFIG = {
+  clientId: process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || 'demo-strava-client-id',
+  clientSecret: process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || 'demo-strava-secret',
+  baseUrl: 'https://www.strava.com/api/v3',
+};
+
 export const STORAGE_KEYS = {
   USER: '@universal_health_user',
   THEME: '@universal_health_theme',

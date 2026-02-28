@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="484.53165mm"
+     height="1175mm"
+     viewBox="0 0 484.53165 1175"
+     version="1.1"
+     id="interactive-muscle-anatomy">
+  <title>Interactive Muscle Anatomy</title>
+  <desc>Hover over muscle groups to see their names. Click to highlight.</desc>
+
+  <style>
+    .muscle {
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .muscle:hover {
+      opacity: 1 !important;
+      filter: drop-shadow(0 0 5px rgba(255,255,255,0.8));
+    }
+    .muscle-group {
+      opacity: 0.6;
+    }
+    .tooltip {
+      position: absolute;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      pointer-events: none;
+      display: none;
+    }
+  </style>
+
+  <script type="text/ecmascript"><![CDATA[
+    var tooltip = null;
+    function showTooltip(evt, name) {
+      if (!tooltip) {
+        tooltip = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+        tooltip.setAttribute("class", "tooltip");
+        document.documentElement.appendChild(tooltip);
+      }
+      tooltip.innerHTML = '<div style="background:rgba(0,0,0,0.9);color:white;padding:5px 10px;border-radius:3px;">' + name + '</div>';
+      tooltip.setAttribute("x", evt.clientX + 10);
+      tooltip.setAttribute("y", evt.clientY + 10);
+      tooltip.setAttribute("width", "auto");
+      tooltip.setAttribute("height", "auto");
+      tooltip.style.display = "block";
+    }
+    function hideTooltip() {
+      if (tooltip) tooltip.style.display = "none";
+    }
+  ]]></script>
+
+  <g transform="translate(196.71685,444.16454)">
+  </g>
+</svg>

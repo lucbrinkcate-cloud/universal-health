@@ -35,13 +35,63 @@ export interface SleepData {
   score: number;
 }
 
-export interface TerraActivity {
+export interface Workout {
   id: string;
-  source: string;
-  sourceData: Record<string, unknown>;
+  name: string;
+  type: string;
   startTime: string;
   endTime: string;
-  metrics: TerraMetrics;
+  duration: number;
+  calories: number;
+  distance?: number;
+  averageHeartRate?: number;
+  maxHeartRate?: number;
+}
+
+export interface BodyMetrics {
+  weight?: number;
+  height?: number;
+  bmi?: number;
+  bodyFat?: number;
+  muscleMass?: number;
+  waterPercentage?: number;
+  boneMass?: number;
+  bloodPressure?: {
+    systolic: number;
+    diastolic: number;
+  };
+  heartRate?: number;
+  temperature?: number;
+  oxygenSaturation?: number;
+}
+
+export interface StravaActivity {
+  id: string;
+  name: string;
+  distance: number;
+  moving_time: number;
+  elapsed_time: number;
+  total_elevation_gain: number;
+  type: string;
+  sport_type: string;
+  start_date: string;
+  start_date_local: string;
+  timezone: string;
+  utc_offset: number;
+  average_speed: number;
+  max_speed: number;
+  has_heartrate: boolean;
+  average_heartrate?: number;
+  max_heartrate?: number;
+  calories?: number;
+}
+
+export interface DeviceProvider {
+  id: string;
+  name: string;
+  logo: string;
+  description: string;
+  status: "connected" | "disconnected" | "pending";
 }
 
 export interface TerraMetrics {
@@ -88,14 +138,29 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Dashboard: undefined;
-  DigitalTwin: undefined;
-  Devices: undefined;
-  Profile: undefined;
   Gamification: undefined;
-  Biometrics: undefined;
   Friends: undefined;
-  Leaderboard: undefined;
+  Profile: undefined;
+};
+
+export type HomeStackParamList = {
+  Dashboard: undefined;
+  Biometrics: undefined;
+};
+
+export type ActivityStackParamList = {
+  Gamification: undefined;
   Analytics: undefined;
+  Leaderboard: undefined;
+};
+
+export type SocialStackParamList = {
+  Friends: undefined;
+};
+
+export type ProfileStackParamList = {
+  Profile: undefined;
+  Devices: undefined;
   Notifications: undefined;
 };
 

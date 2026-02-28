@@ -5,7 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useGamificationStore } from '../../stores';
 import { AchievementsList } from '../../components';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants';
@@ -14,6 +16,7 @@ import { AVATAR_ACCESSORIES } from '../../constants/gamification';
 type TabType = 'achievements' | 'shop' | 'avatar';
 
 export const GamificationScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<TabType>('achievements');
   const { currency, buyAccessory, avatar, feedAvatar, exerciseAvatar } = useGamificationStore();
   
@@ -128,7 +131,21 @@ export const GamificationScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Gamification</Text>
+        <Text style={styles.title}>Rewards</Text>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('Analytics')}
+          >
+            <Text style={styles.headerButtonText}>📊</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('Leaderboard')}
+          >
+            <Text style={styles.headerButtonText}>🏅</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       
       <View style={styles.tabs}>
@@ -175,6 +192,19 @@ const styles = StyleSheet.create({
   header: {
     padding: SPACING.md,
     paddingTop: SPACING.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+  },
+  headerButton: {
+    padding: SPACING.sm,
+    marginLeft: SPACING.xs,
+  },
+  headerButtonText: {
+    fontSize: 24,
   },
   title: {
     fontSize: FONT_SIZE.xxl,

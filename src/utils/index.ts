@@ -85,6 +85,8 @@ export const heartRateZones = {
   peak: { min: 140, max: 220, label: 'Peak', color: '#EF4444' },
 };
 
+export * from './muscleTracker';
+
 export const getHeartRateZone = (bpm: number): string => {
   if (bpm < 60) return 'rest';
   if (bpm < 100) return 'fatBurn';

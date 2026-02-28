@@ -37,7 +37,7 @@ interface GamificationStore {
   refreshDailyChallenges: () => void;
   feedAvatar: () => void;
   exerciseAvatar: () => void;
-  updateAvatarState: (healthData: HealthData) => void;
+  updateAvatarState: (healthData: HealthData, readiness?: number) => void;
   buyAccessory: (accessoryId: string, cost: { coins: number; gems: number }) => boolean;
   getLevelProgress: () => number;
   getUnlockedAchievements: () => Achievement[];
@@ -325,7 +325,7 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
     get().addCurrency(10, 0, 'Exercise session');
   },
   
-  updateAvatarState: (healthData: HealthData) => {
+  updateAvatarState: (healthData: HealthData, readiness?: number) => {
     set(state => {
       const hoursSinceLastFed = (Date.now() - new Date(state.avatar.lastFed).getTime()) / (1000 * 60 * 60);
       const hoursSinceExercise = (Date.now() - new Date(state.avatar.lastExercised).getTime()) / (1000 * 60 * 60);
@@ -333,14 +333,20 @@ export const useGamificationStore = create<GamificationStore>((set, get) => ({
       let newEnergy = state.avatar.energy;
       let newHealth = state.avatar.health;
       
-      // Decay energy over time
-      if (hoursSinceLastFed > 4) {
-        newEnergy = Math.max(0, newEnergy - 5);
-      }
-      
-      // Health decreases if not exercised
-      if (hoursSinceExercise > 24) {
-        newHealth = Math.max(0, newHealth - 5);
+      // If we have readiness from the Biological Engine, use it to influence Health/Energy
+      if (readiness !== undefined) {
+        newHealth = Math.round((newHealth + readiness) / 2);
+        newEnergy = Math.round((newEnergy + readiness) / 2);
+      } else {
+        // Decay energy over time if no real-time readiness
+        if (hoursSinceLastFed > 4) {
+          newEnergy = Math.max(0, newEnergy - 5);
+        }
+        
+        // Health decreases if not exercised
+        if (hoursSinceExercise > 24) {
+          newHealth = Math.max(0, newHealth - 5);
+        }
       }
       
       // Health increases with good sleep

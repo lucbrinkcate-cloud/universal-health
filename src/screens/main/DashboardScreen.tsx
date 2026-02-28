@@ -5,13 +5,16 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useHealthStore, useGamificationStore } from '../../stores';
-import { HealthCard, SleepChart, Loading, ErrorView, ProgressCard, DailyChallenges } from '../../components';
+import { HealthCard, SleepChart, Loading, ErrorView, ProgressCard, DailyChallenges, AvatarHeroCard } from '../../components';
 import { COLORS, SPACING, FONT_SIZE } from '../../constants';
 import { formatTime, getRelativeTime } from '../../utils';
 
 export const DashboardScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { healthData, isLoading, error, fetchHealthData, useMockData, clearError } =
     useHealthStore();
   const { checkAchievements, updateAvatarState, updateChallengeProgress } = useGamificationStore();
@@ -68,6 +71,8 @@ export const DashboardScreen: React.FC = () => {
       }
     >
       <ProgressCard />
+      
+      <AvatarHeroCard />
 
       <View style={styles.section}>
         <DailyChallenges />
@@ -75,6 +80,12 @@ export const DashboardScreen: React.FC = () => {
 
       <View style={styles.header}>
         <Text style={styles.greeting}>Today's Health</Text>
+        <TouchableOpacity 
+          style={styles.seeMoreButton}
+          onPress={() => navigation.navigate('Biometrics')}
+        >
+          <Text style={styles.seeMoreText}>See All →</Text>
+        </TouchableOpacity>
         <Text style={styles.lastUpdated}>
           Updated {getRelativeTime(data?.lastUpdated || new Date())}
         </Text>
@@ -165,6 +176,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.text,
   },
+  seeMoreButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+  },
+  seeMoreText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   lastUpdated: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
@@ -182,6 +205,13 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: SPACING.lg,
+  },
+  digitalTwinSection: {
+    marginBottom: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: SPACING.md,
+    alignItems: 'center',
   },
   sectionTitle: {
     fontSize: FONT_SIZE.lg,

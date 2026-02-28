@@ -6,3 +6,4 @@ export { useLeaderboardStore } from './leaderboardStore';
 export { useAnalyticsStore } from './analyticsStore';
 export { useNotificationsStore } from './notificationsStore';
 export { useAvatarStore } from './avatarStore';
+export { useThemeStore, lightColors, darkColors } from './themeStore';

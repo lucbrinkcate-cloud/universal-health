@@ -8,3 +8,4 @@ export { FriendsScreen } from './FriendsScreen';
 export { LeaderboardScreen } from './LeaderboardScreen';
 export { AnalyticsScreen } from './AnalyticsScreen';
 export { NotificationsScreen } from './NotificationsScreen';
+export { MuscleAnatomyScreen } from './MuscleAnatomyScreen';

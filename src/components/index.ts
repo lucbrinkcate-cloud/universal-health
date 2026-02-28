@@ -10,3 +10,5 @@ export { BodyRegionDetail } from './BodyRegionDetail';
 export { ProgressCard } from './ProgressCard';
 export { AchievementsList } from './AchievementsList';
 export { DailyChallenges } from './DailyChallenges';
+export { AvatarHeroCard } from './AvatarHeroCard';
+export { Skeleton, SkeletonCard, SkeletonList, SkeletonBiometricCard } from './Skeleton';

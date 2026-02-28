@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { COLORS, SPACING, FONT_SIZE } from '../constants';
+import { SPACING, FONT_SIZE } from '../constants';
+import { useThemeStore } from '../stores';
 
 interface LoadingProps {
   message?: string;
@@ -11,19 +12,21 @@ export const Loading: React.FC<LoadingProps> = ({
   message = 'Loading...',
   fullScreen = false,
 }) => {
+  const { colors } = useThemeStore();
+  
   if (fullScreen) {
     return (
-      <View style={styles.fullScreen}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        {message && <Text style={styles.message}>{message}</Text>}
+      <View style={[styles.fullScreen, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        {message && <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>}
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="small" color={COLORS.primary} />
-      {message && <Text style={styles.message}>{message}</Text>}
+      <ActivityIndicator size="small" color={colors.primary} />
+      {message && <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>}
     </View>
   );
 };
@@ -38,12 +41,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
   },
   message: {
     marginTop: SPACING.md,
     fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
   },
 });
 

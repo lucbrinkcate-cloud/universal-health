@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../stores';
 import { COLORS, SPACING, FONT_SIZE } from '../../constants';
 
 export const ProfileScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { user, signOut, isLoading } = useAuthStore();
 
   const handleSignOut = () => {
@@ -35,12 +37,13 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const menuItems = [
-    { icon: '👤', title: 'Personal Info', subtitle: 'Name, email, phone' },
-    { icon: '🔔', title: 'Notifications', subtitle: 'Push notifications settings' },
-    { icon: '🔒', title: 'Privacy', subtitle: 'Data and security settings' },
-    { icon: '📊', title: 'Data Export', subtitle: 'Download your health data' },
-    { icon: '❓', title: 'Help & Support', subtitle: 'FAQ and contact us' },
-    { icon: 'ℹ️', title: 'About', subtitle: 'App version and info' },
+    { icon: '👤', title: 'Personal Info', subtitle: 'Name, email, phone', onPress: () => {} },
+    { icon: '📱', title: 'Devices', subtitle: 'Connect health devices', onPress: () => navigation.navigate('Devices') },
+    { icon: '🔔', title: 'Notifications', subtitle: 'Push notifications settings', onPress: () => navigation.navigate('Notifications') },
+    { icon: '🔒', title: 'Privacy', subtitle: 'Data and security settings', onPress: () => {} },
+    { icon: '📊', title: 'Data Export', subtitle: 'Download your health data', onPress: () => {} },
+    { icon: '❓', title: 'Help & Support', subtitle: 'FAQ and contact us', onPress: () => {} },
+    { icon: 'ℹ️', title: 'About', subtitle: 'App version and info', onPress: () => {} },
   ];
 
   return (
@@ -60,7 +63,7 @@ export const ProfileScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
         {menuItems.slice(0, 1).map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem}>
+          <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
             <Text style={styles.menuIcon}>{item.icon}</Text>
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuTitle}>{item.title}</Text>
@@ -74,7 +77,7 @@ export const ProfileScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Settings</Text>
         {menuItems.slice(1, 4).map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem}>
+          <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
             <Text style={styles.menuIcon}>{item.icon}</Text>
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuTitle}>{item.title}</Text>
@@ -88,7 +91,7 @@ export const ProfileScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         {menuItems.slice(4).map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem}>
+          <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
             <Text style={styles.menuIcon}>{item.icon}</Text>
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuTitle}>{item.title}</Text>

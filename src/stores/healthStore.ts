@@ -1,6 +1,10 @@
 import { create } from 'zustand';
-import { HealthData, TerraProvider, ExtendedHealthData, BodyRegion } from '../types';
+import { Platform } from 'react-native';
+import { HealthData, DeviceProvider, ExtendedHealthData, BodyRegion, StravaActivity } from "../types";
 import { nativeHealthService } from '../services/nativeHealth';
+import { stravaService } from '../services/stravaService';
+import { useGamificationStore } from './gamificationStore';
+import axios from 'axios';
 import { createExtendedHealthData } from '../utils/healthScoreEngine';
 
 type ProviderId = 'native' | string;
@@ -32,7 +36,10 @@ interface HealthStore {
   extendedHealthData: ExtendedHealthData | null;
   isLoading: boolean;
   error: string | null;
-  connectedDevices: readonly TerraProvider[];
+  connectedDevices: readonly DeviceProvider[];
+  stravaActivities: StravaActivity[];
+  stravaConnected: boolean;
+  fetchStravaActivities: () => Promise<void>;
   selectedRegion: BodyRegion | null;
   nativeHealthAvailable: boolean;
   fetchHealthData: (date?: string) => Promise<void>;
@@ -52,6 +59,8 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   isLoading: false,
   error: null,
   connectedDevices: [],
+  stravaActivities: [],
+  stravaConnected: false,
   selectedRegion: null,
   nativeHealthAvailable: false,
 
@@ -63,28 +72,58 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
       // Initialize native health service
       const isNativeAvailable = await get().initializeNativeHealth();
       
+      let finalData: HealthData | null = null;
+
       // Fetch data from native health if available
       if (isNativeAvailable) {
-        const nativeData = await get().fetchNativeHealthData(targetDate);
-        if (nativeData) {
-          set({
-            healthData: nativeData,
-            extendedHealthData: createExtendedHealthData(nativeData),
-            isLoading: false,
-            nativeHealthAvailable: true,
-          });
-          return;
-        }
+        finalData = await get().fetchNativeHealthData(targetDate);
       }
       
-      // If native health not available, use mock data
-      const mockData = nativeHealthService.generateMockHealthData();
+      // If no native data, use mock as a base
+      if (!finalData) {
+        finalData = nativeHealthService.generateMockHealthData();
+      }
+
+      // SYNC WITH BACKEND (De-Duplication & Biological Engine)
+      try {
+        const response = await axios.post("http://localhost:3000/api/health/sync", {
+          nativeData: finalData,
+          stravaActivities: get().stravaActivities
+        });
+
+        if (response.data) {
+          const syncedData = response.data;
+          
+          // Update health data
+          set({
+            healthData: syncedData,
+            extendedHealthData: createExtendedHealthData(syncedData),
+            isLoading: false,
+            nativeHealthAvailable: isNativeAvailable,
+          });
+
+          // Award XP from activities
+          if (syncedData.xpGained > 0) {
+            useGamificationStore.getState().addXP(syncedData.xpGained, "Workout Sync");
+          }
+
+          // Update Avatar based on Readiness
+          useGamificationStore.getState().updateAvatarState(syncedData, syncedData.readiness);
+          
+          return;
+        }
+      } catch (backendError) {
+        console.warn("Backend sync failed, falling back to local processing:", backendError);
+      }
+
+      // Local Fallback if backend is down
       set({
-        healthData: mockData,
-        extendedHealthData: createExtendedHealthData(mockData),
+        healthData: finalData,
+        extendedHealthData: createExtendedHealthData(finalData),
         isLoading: false,
-        nativeHealthAvailable: false,
+        nativeHealthAvailable: isNativeAvailable,
       });
+      useGamificationStore.getState().updateAvatarState(finalData);
     } catch (error) {
       set({
         error: formatErrorMessage(error, 'Failed to fetch health data'),
@@ -99,13 +138,22 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
       const isAvailable = await nativeHealthService.initialize();
       
       set({
-        connectedDevices: isAvailable ? [{
-          id: 'native',
-          name: 'Native Health',
-          logo: 'heart',
-          description: 'Health data from your device',
-          status: 'connected' as const,
-        }] : [],
+        connectedDevices: isAvailable ? [
+          {
+            id: "native",
+            name: "Native Health",
+            logo: "heart",
+            description: "Health data from your device",
+            status: "connected" as const,
+          },
+          ...(get().stravaConnected ? [{
+            id: "strava",
+            name: "Strava",
+            logo: "bicycle",
+            description: "Activity data from Strava",
+            status: "connected" as const,
+          }] : [])
+        ] : [],
         isLoading: false,
       });
     } catch (error) {
@@ -119,12 +167,25 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   connectDevice: async (providerId: string) => {
     set({ isLoading: true, error: null });
     try {
-      if (providerId === 'native') {
+      if (providerId === 'native' || providerId === 'apple_health' || providerId === 'google_health_connect') {
         const isAvailable = await nativeHealthService.initialize();
         if (isAvailable) {
           const isPermissionGranted = await nativeHealthService.requestPermissions();
           if (isPermissionGranted) {
-            set({ nativeHealthAvailable: true });
+            set(state => ({
+              nativeHealthAvailable: true,
+              connectedDevices: [
+                ...state.connectedDevices.filter(d => d.id !== 'native'),
+                {
+                  id: 'native',
+                  name: Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect',
+                  logo: 'health',
+                  description: 'Native health platform',
+                  status: 'connected' as const,
+                },
+              ],
+              isLoading: false,
+            }));
             return 'native';
           }
           set({ error: 'Permission denied. Please grant health data access.', isLoading: false });
@@ -133,8 +194,33 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
         set({ error: 'Native health service unavailable on this device', isLoading: false });
         throw new Error('Native health service unavailable');
       }
-      set({ error: `Device with ID ${providerId} not found`, isLoading: false });
-      throw new Error('Device not found');
+
+      const providerNames: Record<string, string> = {
+        strava: 'Strava',
+        garmin: 'Garmin',
+        fitbit: 'Fitbit',
+        ouraring: 'Oura Ring',
+        whoop: 'Whoop',
+        samsung_health: 'Samsung Health',
+      };
+
+      const providerName = providerNames[providerId] || providerId;
+      
+      set(state => ({
+        connectedDevices: [
+          ...state.connectedDevices.filter(d => d.id !== providerId),
+          {
+            id: providerId,
+            name: providerName,
+            logo: 'device',
+            description: `${providerName} device connected`,
+            status: 'connected' as const,
+          },
+        ],
+        isLoading: false,
+      }));
+      
+      return providerId;
     } catch (error) {
       if ((error as Error).message === 'Device not found' || (error as Error).message.includes('unavailable') || (error as Error).message.includes('denied')) {
         throw error;
@@ -150,10 +236,21 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   disconnectDevice: async (providerId: string) => {
     set({ isLoading: true, error: null });
     try {
-      if (providerId === 'native') {
-        set({ nativeHealthAvailable: false });
+      if (providerId === 'native' || providerId === 'apple_health' || providerId === 'google_health_connect') {
+        set(state => ({
+          nativeHealthAvailable: false,
+          connectedDevices: state.connectedDevices.filter(
+            d => d.id !== 'native' && d.id !== 'apple_health' && d.id !== 'google_health_connect'
+          ),
+          isLoading: false,
+        }));
+        return;
       }
-      set({ isLoading: false });
+
+      set(state => ({
+        connectedDevices: state.connectedDevices.filter(d => d.id !== providerId),
+        isLoading: false,
+      }));
     } catch (error) {
       set({
         error: formatErrorMessage(error, 'Failed to disconnect device'),
@@ -187,6 +284,18 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch native health data:', error);
       return null;
+    }
+  },
+
+  fetchStravaActivities: async () => {
+    set({ isLoading: true });
+    try {
+      if (get().stravaConnected) {
+        const activities = await stravaService.getActivities();
+        set({ stravaActivities: activities, isLoading: false });
+      }
+    } catch (error) {
+      set({ error: "Failed to fetch Strava activities", isLoading: false });
     }
   },
 

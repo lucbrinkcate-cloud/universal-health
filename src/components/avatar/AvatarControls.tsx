@@ -1,76 +1,108 @@
-// AvatarControls component – simple UI to tweak avatar settings
 import React from 'react';
-import { View, Text, TextInput, Switch, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useAvatarStore } from '../../stores/avatarStore';
+import { SKIN_TONES, BODY_TYPES } from '../../constants/avatarOptions';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants';
 
 export const AvatarControls: React.FC = () => {
-  const {
-    skinTone,
-    anatomyLayers,
-    setSkinTone,
-    setAnatomyLayer,
-  } = useAvatarStore();
-
-  // Generate toggles for each anatomy layer key
-  const layerKeys = Object.keys(anatomyLayers);
+  const { customization, setCustomization } = useAvatarStore();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Skin Tone (hex):</Text>
-      <TextInput
-        style={styles.input}
-        value={skinTone}
-        onChangeText={setSkinTone}
-        placeholder="#FFCCAA"
-      />
-      <Text style={styles.label}>Anatomy Layers:</Text>
-      {layerKeys.length === 0 ? (
-        <Text style={styles.note}>No layers defined yet.</Text>
-      ) : (
-        layerKeys.map((key) => (
-          <View key={key} style={styles.row}>
-            <Text style={styles.rowLabel}>{key}</Text>
-            <Switch
-              value={anatomyLayers[key]}
-              onValueChange={(val) => setAnatomyLayer(key, val)}
-            />
-          </View>
-        ))
-      )}
+      <Text style={styles.label}>Skin Tone</Text>
+      <View style={styles.colorRow}>
+        {SKIN_TONES.map((tone) => (
+          <Pressable
+            key={tone.id}
+            style={[
+              styles.colorButton,
+              customization.skinTone === tone.color && styles.colorButtonSelected,
+            ]}
+            onPress={() => setCustomization({ skinTone: tone.color })}
+          >
+            <View style={[styles.colorSwatch, { backgroundColor: tone.color }]} />
+          </Pressable>
+        ))}
+      </View>
+
+      <Text style={styles.label}>Body Type</Text>
+      <View style={styles.typeRow}>
+        {BODY_TYPES.map((type) => (
+          <Pressable
+            key={type.id}
+            style={[
+              styles.typeButton,
+              customization.bodyType === type.id && styles.typeButtonSelected,
+            ]}
+            onPress={() => setCustomization({ bodyType: type.id as any })}
+          >
+            <Text style={styles.typeIcon}>{type.icon}</Text>
+            <Text style={styles.typeName}>{type.name}</Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginVertical: 8,
-    elevation: 2,
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
   },
   label: {
+    fontSize: FONT_SIZE.md,
     fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  colorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: SPACING.md,
+  },
+  colorButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    padding: 2,
+    marginRight: SPACING.sm,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorButtonSelected: {
+    borderColor: COLORS.primary,
+  },
+  colorSwatch: {
+    flex: 1,
+    borderRadius: 16,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  typeButton: {
+    alignItems: 'center',
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    flex: 1,
+    marginHorizontal: SPACING.xs,
+  },
+  typeButtonSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}15`,
+  },
+  typeIcon: {
+    fontSize: 24,
     marginBottom: 4,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    padding: 6,
-    marginBottom: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  rowLabel: {
-    textTransform: 'capitalize',
-  },
-  note: {
-    fontStyle: 'italic',
-    color: '#777',
+  typeName: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
   },
 });
+
+export default AvatarControls;
