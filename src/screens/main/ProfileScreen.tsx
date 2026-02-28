@@ -6,14 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Switch,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAuthStore } from '../../stores';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore, useThemeStore } from '../../stores';
 import { COLORS, SPACING, FONT_SIZE } from '../../constants';
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, signOut, isLoading } = useAuthStore();
+  const { mode, setThemeMode, toggleTheme } = useThemeStore();
 
   const handleSignOut = () => {
     Alert.alert(
@@ -36,13 +39,34 @@ export const ProfileScreen: React.FC = () => {
     );
   };
 
+  const handleResetOnboarding = () => {
+    Alert.alert(
+      'Reset Onboarding',
+      'This will show the onboarding screen next time you restart the app.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Reset', 
+          onPress: async () => {
+            await AsyncStorage.setItem('@onboarding_complete', 'false');
+            Alert.alert('Done', 'Onboarding will show on next app restart.');
+          }
+        },
+      ]
+    );
+  };
+
+  const isDarkMode = mode === 'dark';
+
   const menuItems = [
     { icon: '👤', title: 'Personal Info', subtitle: 'Name, email, phone', onPress: () => {} },
     { icon: '📱', title: 'Devices', subtitle: 'Connect health devices', onPress: () => navigation.navigate('Devices') },
     { icon: '🔔', title: 'Notifications', subtitle: 'Push notifications settings', onPress: () => navigation.navigate('Notifications') },
+    { icon: '🌙', title: 'Dark Mode', subtitle: isDarkMode ? 'Currently enabled' : 'Currently disabled', onPress: toggleTheme, hasSwitch: true, switchValue: isDarkMode },
     { icon: '🔒', title: 'Privacy', subtitle: 'Data and security settings', onPress: () => {} },
     { icon: '📊', title: 'Data Export', subtitle: 'Download your health data', onPress: () => {} },
     { icon: '❓', title: 'Help & Support', subtitle: 'FAQ and contact us', onPress: () => {} },
+    { icon: '🔄', title: 'Reset Onboarding', subtitle: 'Show welcome screens again', onPress: handleResetOnboarding },
     { icon: 'ℹ️', title: 'About', subtitle: 'App version and info', onPress: () => {} },
   ];
 
@@ -76,21 +100,30 @@ export const ProfileScreen: React.FC = () => {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Settings</Text>
-        {menuItems.slice(1, 4).map((item, index) => (
+        {menuItems.slice(1, 5).map((item, index) => (
           <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
             <Text style={styles.menuIcon}>{item.icon}</Text>
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuTitle}>{item.title}</Text>
               <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            {item.hasSwitch ? (
+              <Switch
+                value={item.switchValue}
+                onValueChange={toggleTheme}
+                trackColor={{ false: '#767577', true: COLORS.primaryLight }}
+                thumbColor={item.switchValue ? COLORS.primary : '#f4f3f4'}
+              />
+            ) : (
+              <Text style={styles.chevron}>›</Text>
+            )}
           </TouchableOpacity>
         ))}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
-        {menuItems.slice(4).map((item, index) => (
+        {menuItems.slice(5).map((item, index) => (
           <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
             <Text style={styles.menuIcon}>{item.icon}</Text>
             <View style={styles.menuTextContainer}>

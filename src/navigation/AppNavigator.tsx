@@ -224,19 +224,22 @@ const AppNavigator: React.FC = () => {
   const { colors, mode } = useThemeStore();
   const systemColorScheme = useColorScheme();
   const [isInitialized, setIsInitialized] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(true);
 
   useEffect(() => {
-    const checkOnboarding = async () => {
+    const initializeApp = async () => {
       try {
-        const value = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
-        setShowOnboarding(value === 'true');
+        await fetchConnectedDevices();
+        await fetchHealthData();
       } catch (error) {
-        setShowOnboarding(false);
+        console.error('Failed to initialize app:', error);
+      } finally {
+        setIsInitialized(true);
       }
     };
-    checkOnboarding();
-  }, []);
+
+    initializeApp();
+  }, [fetchHealthData, fetchConnectedDevices]);
 
   const isDark = useMemo(() => {
     if (mode === 'system') {
@@ -284,30 +287,12 @@ const AppNavigator: React.FC = () => {
       }
     };
 
-    if (showOnboarding === false) {
-      initializeApp();
-    }
-  }, [showOnboarding, fetchHealthData, fetchConnectedDevices]);
+    initializeApp();
+  }, [fetchHealthData, fetchConnectedDevices]);
 
   const handleOnboardingComplete = async () => {
-    try {
-      await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
-    } catch (error) {
-      console.error('Failed to save onboarding state:', error);
-    }
     setShowOnboarding(false);
-    setIsInitialized(true);
-    fetchConnectedDevices();
-    fetchHealthData();
   };
-
-  if (showOnboarding === null) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
 
   if (showOnboarding) {
     return (

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { useThemeStore } from '../stores';
 
 interface SkeletonProps {
@@ -16,41 +16,16 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   style 
 }) => {
   const { colors } = useThemeStore();
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [animatedValue]);
-
-  const opacity = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
-  });
 
   return (
-    <Animated.View
+    <View
       style={[
         {
           width: width || '100%',
           height,
           borderRadius,
           backgroundColor: colors.border,
-          opacity,
+          opacity: 0.5,
         },
         style,
       ]}
