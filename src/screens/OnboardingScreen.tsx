@@ -4,15 +4,14 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
-  Animated,
   SafeAreaView,
 } from 'react-native';
 import { useThemeStore } from '../stores';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants';
+import { SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface OnboardingSlide {
   id: string;
@@ -53,10 +52,9 @@ interface OnboardingScreenProps {
 }
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
-  const { colors, setThemeMode } = useThemeStore();
+  const { colors } = useThemeStore();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const renderSlide = ({ item }: { item: OnboardingSlide }) => (
     <View style={[styles.slide, { backgroundColor: colors.background }]}>
@@ -70,38 +68,25 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
 
   const renderDots = () => (
     <View style={styles.dotsContainer}>
-      {slides.map((_, index) => {
-        const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-        const scale = scrollX.interpolate({
-          inputRange,
-          outputRange: [0.8, 1.2, 0.8],
-          extrapolate: 'clamp',
-        });
-        const opacity = scrollX.interpolate({
-          inputRange,
-          outputRange: [0.4, 1, 0.4],
-          extrapolate: 'clamp',
-        });
-        return (
-          <Animated.View
-            key={index}
-            style={[
-              styles.dot,
-              {
-                backgroundColor: colors.primary,
-                opacity,
-                transform: [{ scale }],
-              },
-            ]}
-          />
-        );
-      })}
+      {slides.map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.dot,
+            {
+              backgroundColor: colors.primary,
+              opacity: index === currentIndex ? 1 : 0.4,
+              transform: [{ scale: index === currentIndex ? 1.2 : 1 }],
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+      scrollViewRef.current?.scrollTo({ x: (currentIndex + 1) * width, animated: true });
       setCurrentIndex(currentIndex + 1);
     } else {
       onComplete();
@@ -110,6 +95,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
 
   const handleSkip = () => {
     onComplete();
+  };
+
+  const handleScroll = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / width);
+    setCurrentIndex(index);
   };
 
   const renderButtons = () => (
@@ -132,38 +123,31 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     </View>
   );
 
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index || 0);
-    }
-  }).current;
-
-  const viewabilityConfig = useRef({
-    viewAreaCoveragePercentThreshold: 50,
-  }).current;
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.logo, { color: colors.primary }]}>UH</Text>
       </View>
       
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderSlide}
-        keyExtractor={(item) => item.id}
+      <ScrollView
+        ref={scrollViewRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
-        )}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
+        onScroll={handleScroll}
         scrollEventThrottle={16}
-      />
+        decelerationRate="fast"
+      >
+        {slides.map((item) => (
+          <View key={item.id} style={[styles.slide, { width }]}>
+            <Text style={styles.icon}>{item.icon}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              {item.description}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
       
       {renderDots()}
       {renderButtons()}
