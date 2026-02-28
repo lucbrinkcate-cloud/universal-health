@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COLORS } from '../constants';
+import { useColorScheme } from 'react-native';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -25,6 +25,10 @@ interface ThemeColors {
   textTertiary: string;
   textLight: string;
   border: string;
+  steps: string;
+  heartRate: string;
+  sleep: string;
+  calories: string;
 }
 
 interface ThemeState {
@@ -32,6 +36,7 @@ interface ThemeState {
   colors: ThemeColors;
   setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  isDark: boolean;
 }
 
 const lightColors: ThemeColors = {
@@ -54,6 +59,10 @@ const lightColors: ThemeColors = {
   textTertiary: '#9CA3AF',
   textLight: '#F9FAFB',
   border: '#E5E7EB',
+  steps: '#3B82F6',
+  heartRate: '#EF4444',
+  sleep: '#8B5CF6',
+  calories: '#F59E0B',
 };
 
 const darkColors: ThemeColors = {
@@ -76,37 +85,62 @@ const darkColors: ThemeColors = {
   textTertiary: '#6B7280',
   textLight: '#111827',
   border: '#374151',
-};
-
-const getColors = (mode: ThemeMode, systemDark: boolean): ThemeColors => {
-  if (mode === 'system') {
-    return systemDark ? darkColors : lightColors;
-  }
-  return mode === 'dark' ? darkColors : lightColors;
+  steps: '#60A5FA',
+  heartRate: '#F87171',
+  sleep: '#A78BFA',
+  calories: '#FBBF24',
 };
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       mode: 'system',
       colors: lightColors,
+      isDark: false,
       setThemeMode: (mode: ThemeMode) => {
-        const colors = getColors(mode, false);
-        set({ mode, colors });
+        const systemColorScheme = useColorScheme();
+        const systemDark = systemColorScheme === 'dark';
+        const isDark = mode === 'dark' || (mode === 'system' && systemDark);
+        const colors = isDark ? darkColors : lightColors;
+        set({ mode, colors, isDark });
       },
       toggleTheme: () => {
         set((state) => {
           const newMode = state.mode === 'light' ? 'dark' : 'light';
-          return { mode: newMode, colors: getColors(newMode, false) };
+          const colors = newMode === 'dark' ? darkColors : lightColors;
+          return { mode: newMode, colors, isDark: newMode === 'dark' };
         });
       },
     }),
     {
       name: 'theme-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const systemColorScheme = useColorScheme();
+          const systemDark = systemColorScheme === 'dark';
+          const isDark = state.mode === 'dark' || (state.mode === 'system' && systemDark);
+          state.isDark = isDark;
+          state.colors = isDark ? darkColors : lightColors;
+        }
+      },
     }
   )
 );
+
+export const useTheme = () => {
+  const systemColorScheme = useColorScheme();
+  const { colors, mode, isDark } = useThemeStore();
+  
+  const actualIsDark = mode === 'system' ? systemColorScheme === 'dark' : mode === 'dark';
+  const actualColors = actualIsDark ? darkColors : lightColors;
+  
+  return {
+    colors: actualColors,
+    isDark: actualIsDark,
+    mode,
+  };
+};
 
 export { lightColors, darkColors };
 export default useThemeStore;
