@@ -1,0 +1,15 @@
+export { DashboardScreen } from './DashboardScreen';
+export { DigitalTwinScreen } from './DigitalTwinScreen';
+export { DevicesScreen } from './DevicesScreen';
+export { ProfileScreen } from './ProfileScreen';
+export { GamificationScreen } from './GamificationScreen';
+export { BiometricsScreen } from './BiometricsScreen';
+export { FriendsScreen } from './FriendsScreen';
+export { LeaderboardScreen } from './LeaderboardScreen';
+export { AnalyticsScreen } from './AnalyticsScreen';
+export { NotificationsScreen } from './NotificationsScreen';
+export { MuscleAnatomyScreen } from './MuscleAnatomyScreen';
+export { HomeScreen } from './HomeScreen';
+export { NutritionScreen } from './NutritionScreen';
+export { FitnessScreen } from './FitnessScreen';
+export { CoachScreen } from './CoachScreen';

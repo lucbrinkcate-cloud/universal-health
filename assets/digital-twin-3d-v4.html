@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Digital Twin 3D</title>
+<style>
+html,body{height:100%;overflow:hidden}
+.page{max-width:100%!important;padding:0;height:100%;display:flex;flex-direction:column}
+.card{border:none!important;box-shadow:none!important;border-radius:0!important;flex:1}
+#c{width:100%!important;height:100%!important}
+.hint{bottom:60px!important}
+.stat-row{position:absolute;bottom:0;left:0;right:0;background:var(--card)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#eef2fa;--card:#fff;--text:#1a1a2e;--sub:#8a8fa8;
+  --border:#e0e5f0;--orange:#f97316;--purple:#7c3aed;--blue:#3b82f6;--green:#22c55e;--radius:16px
+}
+html,body{background:var(--bg);min-height:100%;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;color:var(--text)}
+.page{display:flex;flex-direction:column;align-items:center;padding:20px 16px 100px;width:100%;margin:0 auto;flex:1}
+.section-header{width:100%;margin-bottom:12px}
+.section-title{font-size:17px;font-weight:700;letter-spacing:-.2px}
+.card{width:100%;background:var(--card);border-radius:var(--radius);flex:1;
+  border:1px solid var(--border);box-shadow:0 2px 14px rgba(0,0,0,.07);overflow:hidden;display:flex;flex-direction:column}
+.mode-row{display:flex;border-bottom:1px solid var(--border)}
+.mtab{flex:1;padding:12px 0;font-size:12px;font-weight:600;text-align:center;
+  cursor:pointer;border:none;background:transparent;color:var(--sub);
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .18s,border-color .18s}
+.mtab.on{color:var(--orange);border-bottom-color:var(--orange)}
+.mtab.on.anat{color:#ef4444;border-bottom-color:#ef4444}
+.cv-wrap{position:relative;user-select:none;cursor:grab;overflow:hidden;flex:1;min-height:300px}
+.cv-wrap:active{cursor:grabbing}
+#c{display:block;width:100%;height:440px}
+.hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:rgba(80,100,160,.55);pointer-events:none;white-space:nowrap}
+.stat-row{display:flex}
+.stat-chip{flex:1;padding:12px 8px;text-align:center;border-right:1px solid var(--border)}
+.stat-chip:last-child{border-right:none}
+.stat-val{font-size:16px;font-weight:700;line-height:1;margin-bottom:3px}
+.stat-key{font-size:10px;color:var(--sub);font-weight:500}
+/* Tooltip */
+#tip{position:fixed;pointer-events:none;z-index:999;
+  background:rgba(20,6,6,.96);border:1px solid rgba(239,68,68,.28);
+  border-radius:12px;padding:11px 15px;
+  box-shadow:0 8px 32px rgba(80,0,0,.30);opacity:0;transition:opacity .13s;
+  min-width:170px;backdrop-filter:blur(14px)}
+#tip.show{opacity:1}
+.tn{font-size:14px;font-weight:700;color:#fecaca;margin-bottom:2px}
+.ts{font-size:10px;color:rgba(252,165,165,.45);letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:9px}
+.tbw{height:3px;background:rgba(239,68,68,.14);border-radius:2px;overflow:hidden;margin-bottom:7px}
+.tb{height:100%;border-radius:2px;background:#ef4444;transition:width .3s}
+.tst{font-size:11px;color:rgba(252,165,165,.80);display:flex;align-items:center;gap:6px}
+.td{width:5px;height:5px;border-radius:50%;background:#ef4444;flex-shrink:0}
+.tclick{font-size:10px;color:rgba(252,165,165,.45);margin-top:6px}
+</style>
+</head>
+<body>
+<div id="tip">
+  <div class="tn" id="tn">—</div>
+  <div class="ts" id="ts">—</div>
+  <div class="tbw"><div class="tb" id="tb"></div></div>
+  <div class="tst"><div class="td"></div><span id="tt"></span></div>
+  <div class="tclick" id="tclick">Click to select</div>
+</div>
+
+<div class="page">
+  <div class="section-header"><span class="section-title">Your Digital Twin</span></div>
+  <div class="card">
+    <div class="mode-row">
+      <button class="mtab on" id="btn-n" onclick="setMode('normal')">Normal View</button>
+      <button class="mtab"    id="btn-a" onclick="setMode('anatomy')">Muscle Anatomy</button>
+    </div>
+    <div class="cv-wrap">
+      <canvas id="c"></canvas>
+      <div class="hint">⟳ drag to rotate · scroll to zoom</div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-chip">
+        <div class="stat-val" style="color:var(--orange)">94%</div>
+        <div class="stat-key">Muscle Health</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-val" style="color:var(--green)">62 bpm</div>
+        <div class="stat-key">Heart Rate</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-val" style="color:#ef4444">Quads</div>
+        <div class="stat-key">Recovery</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+// ─── RENDERER ────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const cvWrap = canvas.parentElement;
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xe8eef8);
+
+const camera = new THREE.PerspectiveCamera(45,1,0.1,60);
+camera.position.set(0,2.4,8.5);
+camera.lookAt(0,2.4,0);
+
+// Lights
+scene.add(new THREE.AmbientLight(0xf0f4ff, 0.78));
+const sun = new THREE.DirectionalLight(0xffffff, 0.95);
+sun.position.set(-2,6,5); sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera,{near:.1,far:20,left:-3,right:3,top:7,bottom:-1});
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xd0e4ff, 0.35); fill.position.set(3,2,3); scene.add(fill);
+const rim  = new THREE.DirectionalLight(0xc8d8ff, 0.28); rim.position.set(0,4,-8);  scene.add(rim);
+
+// Floor
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(3,40),
+  new THREE.MeshPhongMaterial({color:0xcdd5ea,shininess:6,transparent:true,opacity:0.60})
+);
+floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
+const shadowBlob = new THREE.Mesh(
+  new THREE.CircleGeometry(0.70,28),
+  new THREE.MeshBasicMaterial({color:0xa8b4d0,transparent:true,opacity:0.22})
+);
+shadowBlob.rotation.x=-Math.PI/2; shadowBlob.position.y=0.003; scene.add(shadowBlob);
+
+// ─── COORDINATE SYSTEM ───────────────────────────────────────────────────────
+// Y=0 at ground, total height ~4.76 (8-head canon)
+// Torso LatheGeometry placed at y=Y.hip=2.40, profile (localY → worldY):
+//   P0 r=0.36 localY=0.00 → world 2.40   backZ=-0.360
+//   P1 r=0.40 localY=0.17 → world 2.57   backZ=-0.400
+//   P2 r=0.30 localY=0.50 → world 2.90   backZ=-0.300 (waist)
+//   P3 r=0.37 localY=0.79 → world 3.19   backZ=-0.370
+//   P4 r=0.46 localY=1.04 → world 3.44   backZ=-0.460
+//   P5 r=0.50 localY=1.20 → world 3.60   backZ=-0.500
+//   P6 r=0.47 localY=1.32 → world 3.72   backZ=-0.470 (shoulder)
+//
+// Translucent body rule: back muscles placed INSIDE body (z > backZ at that height)
+// so they never poke through the body silhouette from any angle.
+// Example: lats at y=3.06 where backZ=-0.34 → lat z=-0.28 (inside body ✓)
+const Y = {ankle:.30, knee:1.44, hip:2.40, waist:2.90, chest:3.28, shoulder:3.72, neckBot:3.82, neckTop:4.04, headCtr:4.26};
+const XL = 0.26;
+const A  = {sx:.57, sy:Y.shoulder, ex:.90, ey:2.94, ez:.08, wx:.70, wy:2.42, wz:.14};
+
+// ─── LATHE PROFILES ──────────────────────────────────────────────────────────
+const pTorso = [
+  new THREE.Vector2(.36,.00), new THREE.Vector2(.40,.17),
+  new THREE.Vector2(.30,.50), new THREE.Vector2(.37,.79),
+  new THREE.Vector2(.46,1.04),new THREE.Vector2(.50,1.20),
+  new THREE.Vector2(.47,1.32),
+];
+// Neck funnel: from torso top (r=0.47) smoothly to neck (r=0.112), placed at y=Y.shoulder
+const pFunnel = [
+  new THREE.Vector2(.470,.00), new THREE.Vector2(.420,.02),
+  new THREE.Vector2(.340,.04), new THREE.Vector2(.230,.06),
+  new THREE.Vector2(.145,.09), new THREE.Vector2(.112,.12),
+];
+const pThigh = [
+  new THREE.Vector2(.148,.00), new THREE.Vector2(.162,.12),
+  new THREE.Vector2(.188,.42), new THREE.Vector2(.193,.68),
+  new THREE.Vector2(.185,.96),
+];
+const pCalf = [
+  new THREE.Vector2(.078,.00), new THREE.Vector2(.086,.13),
+  new THREE.Vector2(.132,.43), new THREE.Vector2(.123,.64),
+  new THREE.Vector2(.100,.88), new THREE.Vector2(.094,1.14),
+];
+
+// ─── PRIMITIVE HELPERS ───────────────────────────────────────────────────────
+const sph=(r,m,sw=10,sh=7)=>{ const o=new THREE.Mesh(new THREE.SphereGeometry(r,sw,sh),m); o.castShadow=true; return o; };
+const cyl=(rT,rB,m,s=8)=>{ const o=new THREE.Mesh(new THREE.CylinderGeometry(rT,rB,1,s),m); o.castShadow=true; return o; };
+const lth=(p,m,s=12)=>{ const o=new THREE.Mesh(new THREE.LatheGeometry(p,s),m); o.castShadow=true; return o; };
+const bx=(w,h,d,m)=>{ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); o.castShadow=true; return o; };
+const vU=new THREE.Vector3(0,1,0), vD=new THREE.Vector3();
+function orient(o,ax,ay,az,bx_,by,bz){
+  vD.set(bx_-ax,by-ay,bz-az);
+  const l=vD.length(); o.scale.y=l; o.position.set((ax+bx_)/2,(ay+by)/2,(az+bz)/2);
+  vD.normalize();
+  if(Math.abs(vD.dot(vU))<.9999) o.quaternion.setFromUnitVectors(vU,vD);
+  else if(vD.y<0) o.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI);
+  return o;
+}
+function skelLine(g,...pts){
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  g.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:0x93c5fd,transparent:true,opacity:.45})));
+}
+function ribArc(g,y,rx,rz){
+  const pts=[],N=16;
+  for(let i=0;i<=N;i++){
+    const a=Math.PI*i/N;
+    pts.push(new THREE.Vector3(-rx*Math.sin(a),y,rz*Math.cos(a)));
+    if(i<N)pts.push(new THREE.Vector3(-rx*Math.sin(a+Math.PI/N),y,rz*Math.cos(a+Math.PI/N)));
+  }
+  // right half
+  const pts2=[];
+  for(let i=0;i<=N;i++){
+    const a=Math.PI*i/N;
+    pts2.push(new THREE.Vector3(rx*Math.sin(a),y,rz*Math.cos(a)));
+    if(i<N)pts2.push(new THREE.Vector3(rx*Math.sin(a+Math.PI/N),y,rz*Math.cos(a+Math.PI/N)));
+  }
+  const mat=new THREE.LineBasicMaterial({color:0x93c5fd,transparent:true,opacity:.32});
+  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),mat));
+  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2),mat.clone()));
+}
+
+// ─── MATERIALS ───────────────────────────────────────────────────────────────
+// Normal (clothed) materials
+const mSkin  = new THREE.MeshPhongMaterial({color:0xf0a868,shininess:22});
+const mHair  = new THREE.MeshPhongMaterial({color:0x3a2418,shininess:6});
+const mEye   = new THREE.MeshPhongMaterial({color:0x160a04,shininess:95});
+const mWhite = new THREE.MeshPhongMaterial({color:0xfefefe,shininess:70});
+const mShirt = new THREE.MeshPhongMaterial({color:0xf97316,shininess:50});
+const mPants = new THREE.MeshPhongMaterial({color:0x4b5563,shininess:16});
+const mShoe  = new THREE.MeshPhongMaterial({color:0x1c2230,shininess:80});
+
+// Anatomy holographic body skin — light blue, semi-transparent, DoubleSide so back is visible
+const mBodyAnat = new THREE.MeshPhongMaterial({
+  color:0xbfdbfe, emissive:0x1e40af, emissiveIntensity:.08,
+  shininess:55, transparent:true, opacity:.26,
+  side:THREE.DoubleSide, depthWrite:false
+});
+
+// Skeleton material (blue-white)
+const mBone = new THREE.MeshPhongMaterial({
+  color:0x93c5fd, transparent:true, opacity:.55, shininess:40, depthWrite:false
+});
+
+// ── MUSCLE COLOUR STATES ──────────────────────────────────────────────────────
+const COL_DEFAULT  = 0x7f1d1d;  // dark anatomical red
+const COL_HOVER    = 0xdc2626;  // vivid red
+const COL_SELECTED = 0xf87171;  // bright highlight red
+const OP_DEFAULT   = 0.68;
+const OP_HOVER     = 0.88;
+const OP_SELECTED  = 0.95;
+
+// Each muscle gets its own material instance (clone) so it can be coloured independently
+function makeMuscMat(){
+  return new THREE.MeshPhongMaterial({
+    color:COL_DEFAULT, emissive:0x000000, emissiveIntensity:0,
+    shininess:55, transparent:true, opacity:OP_DEFAULT, depthWrite:false
+  });
+}
+
+// ─── SCENE GROUPS ────────────────────────────────────────────────────────────
+const figure = new THREE.Group(); scene.add(figure);
+const nG = new THREE.Group(); figure.add(nG);
+const aG = new THREE.Group(); figure.add(aG);
+aG.visible = false;
+
+const muscleMeshes = [];
+let hoveredMesh = null;
+let selectedMesh = null;
+
+function addMuscle(g, o, name, sub, pct, status){
+  o.material = makeMuscMat();  // unique mat per mesh
+  o.userData  = {name,sub,pct,status, isSelected:false};
+  g.add(o); muscleMeshes.push(o); return o;
+}
+
+// ─── BODY BUILDER (shared for normal + anatomy base) ─────────────────────────
+function buildBody(g, sk, sm, pm, shm, clothed){
+  // HEAD
+  const head = sph(.290,sk,14,9); head.position.set(0,Y.headCtr,0); g.add(head);
+  const hair = sph(.296,mHair,12,8); hair.scale.set(1.02,.71,1.02); hair.position.set(0,Y.headCtr+.09,0); g.add(hair);
+  [-0.098,0.098].forEach(ex=>{
+    const e=sph(.038,mEye,6,5); e.position.set(ex,Y.headCtr+.02,.263); g.add(e);
+    const gl=sph(.013,mWhite,4,3); gl.position.set(ex-.016,Y.headCtr+.04,.280); g.add(gl);
+  });
+  [-1,1].forEach(s=>{
+    const ear=sph(.070,sk,7,5); ear.scale.set(.52,.86,.60); ear.position.set(s*.300,Y.headCtr,0); g.add(ear);
+  });
+  const nose=sph(.032,sk,5,4); nose.scale.set(.72,.60,1.20); nose.position.set(0,Y.headCtr-.055,.286); g.add(nose);
+
+  // NECK CYLINDER — top at 4.24 overlaps head sphere bottom (4.15) → seamless
+  const neck=cyl(.108,.120,sk,9); orient(neck,0,Y.neckBot,0,0,Y.neckTop,0); g.add(neck);
+
+  // NECK FUNNEL — LatheGeometry bridging torso top (r=0.47) to neck (r=0.112)
+  // Placed at y=Y.shoulder so profile y=0 aligns exactly with torso top ring
+  const funnel=lth(pFunnel,sm,14); funnel.position.set(0,Y.shoulder,0); g.add(funnel);
+
+  // TORSO
+  const torso=lth(pTorso,sm,16); torso.position.set(0,Y.hip,0); g.add(torso);
+
+  // SHOULDER CAPS — bridge torso edge to arm origin
+  [-1,1].forEach(s=>{
+    const cap=sph(.220,sm,10,7); cap.scale.set(1.02,.76,1.16); cap.position.set(s*.52,Y.shoulder,.02); g.add(cap);
+  });
+
+  if(clothed){
+    const collar=sph(.130,sk,7,5); collar.scale.set(.58,.52,.95); collar.position.set(0,Y.neckBot-.03,.10); g.add(collar);
+  }
+
+  // ARMS
+  [-1,1].forEach(s=>{
+    const sx=s*A.sx,ex=s*A.ex,wx=s*A.wx;
+    const ua=cyl(.126,.114,sm,9); orient(ua,sx,A.sy,0,ex,A.ey,A.ez); g.add(ua);
+    const ej=sph(.086,sk,8,6);   ej.position.set(ex,A.ey,A.ez);    g.add(ej);
+    const fa=cyl(.110,.083,sk,9); orient(fa,ex,A.ey,A.ez,wx,A.wy,A.wz); g.add(fa);
+    const wj=sph(.074,sk,7,5);   wj.position.set(wx,A.wy,A.wz);    g.add(wj);
+    const hand=sph(.094,sk,7,5); hand.scale.set(1.22,.82,.92); hand.position.set(wx+s*.044,A.wy-.062,A.wz+.018); g.add(hand);
+  });
+
+  // HIP BRIDGE + HIP SOCKETS
+  const hb=cyl(.340,.380,pm,12); hb.scale.y=.22; hb.position.set(0,Y.hip-.11,0); g.add(hb);
+  [-1,1].forEach(s=>{ const hs=sph(.205,pm,9,7); hs.position.set(s*XL,Y.hip-.02,0); g.add(hs); });
+
+  // THIGHS
+  [-1,1].forEach(s=>{ const th=lth(pThigh,pm,12); th.position.set(s*XL,Y.knee,0); g.add(th); });
+
+  // KNEE SPHERES — r=0.170 ≥ thigh bottom r=0.148 → seals tube hole
+  [-1,1].forEach(s=>{ const kn=sph(.170,sk,9,7); kn.scale.set(1.0,.82,1.12); kn.position.set(s*XL,Y.knee,.028); g.add(kn); });
+
+  // CALVES
+  [-1,1].forEach(s=>{ const ca=lth(pCalf,pm,11); ca.position.set(s*XL,Y.ankle,0); g.add(ca); });
+
+  // ANKLE SPHERES — r=0.096 ≥ calf bottom r=0.078 → seals hole
+  [-1,1].forEach(s=>{ const an=sph(.096,sk,8,6); an.position.set(s*XL,Y.ankle,0); g.add(an); });
+
+  // FEET
+  [-1,1].forEach(s=>{
+    const ft=bx(.238,.126,.428,shm); ft.position.set(s*XL*.90,.063,.146); ft.rotation.y=s*.054; g.add(ft);
+    const toe=bx(.200,.062,.130,shm); toe.position.set(s*XL*.90+s*.005,.108,.296); toe.rotation.y=s*.054; g.add(toe);
+    if(clothed){ const sol=bx(.244,.014,.440,new THREE.MeshPhongMaterial({color:0x2e3548})); sol.position.set(s*XL*.90,.008,.146); sol.rotation.y=s*.054; g.add(sol); }
+  });
+}
+
+// ─── NORMAL LAYER ────────────────────────────────────────────────────────────
+buildBody(nG, mSkin, mShirt, mPants, mShoe, true);
+
+// ─── ANATOMY LAYER ───────────────────────────────────────────────────────────
+(function buildAnat(g){
+
+  // TRANSPARENT BODY BASE — light blue, DoubleSide so back surface is visible
+  buildBody(g, mBodyAnat, mBodyAnat, mBodyAnat, mBodyAnat, false);
+
+  // SKELETON
+  skelLine(g, 0,Y.hip,0,0,Y.shoulder,0,  0,Y.shoulder,0,0,Y.neckTop,0);
+  skelLine(g, 0,Y.shoulder,0,-A.sx,A.sy,0,  0,Y.shoulder,0,A.sx,A.sy,0);
+  skelLine(g, -A.sx,A.sy,0,-A.ex,A.ey,A.ez,  A.sx,A.sy,0,A.ex,A.ey,A.ez);
+  skelLine(g, -A.ex,A.ey,A.ez,-A.wx,A.wy,A.wz,  A.ex,A.ey,A.ez,A.wx,A.wy,A.wz);
+  skelLine(g, -XL,Y.hip,0,-XL,Y.knee,0,  XL,Y.hip,0,XL,Y.knee,0);
+  skelLine(g, -XL,Y.knee,0,-XL,Y.ankle,0,  XL,Y.knee,0,XL,Y.ankle,0);
+  skelLine(g, -XL,Y.hip,0,0,Y.hip+.10,0,  XL,Y.hip,0,0,Y.hip+.10,0);
+  skelLine(g, 0,3.00,.36, 0,3.44,.36);
+
+  [[A.sx,A.sy,0],[A.ex,A.ey,A.ez],[XL,Y.knee,0],[XL,Y.ankle,0]].forEach(([x,y,z])=>{
+    [-1,1].forEach(s=>{ const j=new THREE.Mesh(new THREE.SphereGeometry(.055,7,5),mBone); j.position.set(s*x,y,z); g.add(j); });
+  });
+  [3.42,3.27,3.12,2.97].forEach((y,i)=>{
+    const rx=[.42,.44,.44,.40][i], rz=[.26,.27,.26,.24][i];
+    ribArc(g,y,rx,rz);
+  });
+
+  // ── FRONT MUSCLES ────────────────────────────────────────────────────────
+  // TRAPEZIUS — diamond-shaped muscle. Upper trap: from base of neck out to acromion.
+  // Modelled as a wide flat ellipsoid sitting on top of the shoulder, NOT a cylinder.
+  // Two parts: (1) upper trap slab from neck→shoulder top surface
+  //            (2) thin neck-descending head for the cervical portion
+  [-1,1].forEach(s=>{
+    // Upper trap wing — wide flat ellipsoid spanning neck to acromion
+    const trMain = sph(.260, null, 9, 6);
+    trMain.scale.set(.76, .28, 1.02);
+    trMain.position.set(s*.32, Y.shoulder+.01, -.04);
+    trMain.rotation.z = s * 0.18;
+    addMuscle(g, trMain, 'Trapezius', `${s<0?'Left':'Right'} · Upper back & neck`, 78, 'Good tone');
+
+    // Cervical portion — small ellipsoid on back of neck
+    const trNeck = sph(.095, null, 6, 5);
+    trNeck.scale.set(.48, .55, .38);
+    trNeck.position.set(s*.08, Y.neckBot-.02, -.06);
+    trNeck.material = makeMuscMat(); g.add(trNeck);
+  });
+
+  // Deltoid
+  [-1,1].forEach(s=>{
+    const d=sph(.245,null,10,7); d.scale.set(1.0,.74,1.20); d.position.set(s*A.sx,Y.shoulder-.01,.04);
+    addMuscle(g,d,'Deltoid',`${s<0?'Left':'Right'} shoulder · 3 heads`,74,'Recovered');
+  });
+
+  // Pectoralis Major — torso front at y=3.28: r≈0.406 → z≈+0.38 (inside surface)
+  [-1,1].forEach(s=>{
+    const pec=sph(.252,null,9,7); pec.scale.set(1.08,.86,.46); pec.position.set(s*.20,Y.chest,.38);
+    addMuscle(g,pec,'Pectoralis Major',`${s<0?'Left':'Right'} chest · Push power`,88,'Full activation');
+  });
+
+  // Biceps
+  [-1,1].forEach(s=>{
+    const bic=cyl(.130,.114,null,8);
+    orient(bic,s*A.sx*.90,A.sy-.04,.06,s*A.ex*.90,A.ey+.06,A.ez+.07);
+    addMuscle(g,bic,'Biceps Brachii',`${s<0?'Left':'Right'} arm · Flexion`,82,'Strong');
+  });
+
+  // Triceps (behind upper arm)
+  [-1,1].forEach(s=>{
+    const tri=cyl(.122,.106,null,8);
+    orient(tri,s*A.sx*.88,A.sy-.04,-.05,s*A.ex*.88,A.ey+.04,A.ez-.09);
+    addMuscle(g,tri,'Triceps Brachii',`${s<0?'Left':'Right'} arm · Extension`,70,'Adequate');
+  });
+
+  // Forearm flexors
+  [-1,1].forEach(s=>{
+    const fo=cyl(.110,.080,null,8);
+    orient(fo,s*A.ex,A.ey,A.ez,s*A.wx,A.wy,A.wz);
+    addMuscle(g,fo,'Brachioradialis',`${s<0?'Left':'Right'} forearm · Grip`,65,'Normal');
+  });
+
+  // Serratus Anterior
+  [-1,1].forEach(s=>{
+    [3.40,3.24,3.09].forEach((y,i)=>{
+      const sr=sph(.040,null,5,4); sr.scale.set(.56,.88,1.26); sr.position.set(s*(.43-i*.02),y,.25-i*.02);
+      if(i===0) addMuscle(g,sr,'Serratus Anterior',`${s<0?'Left':'Right'} ribs · Scapula stabiliser`,72,'Active');
+      else { sr.material=makeMuscMat(); g.add(sr); }
+    });
+  });
+
+  // External Oblique — on front-side surface
+  // At x=±0.22, torso radius at waist=0.30 → front z≈+0.21. Place at z=+0.17 (inside) ✓
+  [-1,1].forEach(s=>{
+    const ob=sph(.184,null,8,6); ob.scale.set(.36,1.28,.50); ob.position.set(s*.22,Y.waist-.06,.17);
+    addMuscle(g,ob,'External Oblique',`${s<0?'Left':'Right'} core · Rotation`,76,'Active');
+  });
+
+  // Rectus Abdominis — 4 rows, z inside torso front surface at each height
+  [{y:3.22,z:.38},{y:3.07,z:.34},{y:2.93,z:.31},{y:2.79,z:.33}].forEach(({y,z},row)=>{
+    [-1,1].forEach(s=>{
+      const ab=bx(.087,.114,.062,null);  ab.position.set(s*.050,y,z);
+      if(row===0) addMuscle(g,ab,'Rectus Abdominis',`${s<0?'Left':'Right'} abs · Spine flexion`,82,'Good engagement');
+      else { ab.material=makeMuscMat(); g.add(ab); }
+    });
+  });
+
+  // TFL / Hip Flexors
+  [-1,1].forEach(s=>{
+    const tf=sph(.116,null,7,5); tf.scale.set(.80,1.06,.84); tf.position.set(s*(XL+.12),Y.hip+.01,.15);
+    addMuscle(g,tf,'Tensor Fasciae Latae',`${s<0?'Left':'Right'} hip flexor`,68,'Normal');
+  });
+
+  // Quadriceps — front surface of thigh (z=+0.12 to +0.15, inside thigh r=0.188)
+  [-1,1].forEach(s=>{
+    const vl=cyl(.097,.117,null,7);
+    orient(vl,s*(XL+.05),Y.hip-.12,.09,s*(XL+.04),Y.knee+.12,.08);
+    addMuscle(g,vl,'Vastus Lateralis',`${s<0?'Left':'Right'} outer quad`,64,'24h recovery');
+
+    const rf=cyl(.090,.074,null,7);
+    orient(rf,s*XL*.95,Y.hip-.14,.13,s*XL*.96,Y.knee+.10,.12);
+    addMuscle(g,rf,'Rectus Femoris',`${s<0?'Left':'Right'} center quad`,64,'24h recovery');
+
+    const vm=sph(.090,null,7,5); vm.scale.set(.74,1.08,.82); vm.position.set(s*(XL-.07),Y.knee+.25,.11);
+    addMuscle(g,vm,'Vastus Medialis',`${s<0?'Left':'Right'} inner quad · Teardrop`,68,'Normal');
+  });
+
+  // Adductor Longus — inner thigh
+  [-1,1].forEach(s=>{
+    const ad=cyl(.070,.050,null,7);
+    orient(ad,s*(XL-.10),Y.hip-.12,.04,s*(XL-.08),Y.knee+.10,.04);
+    addMuscle(g,ad,'Adductor Longus',`${s<0?'Left':'Right'} inner thigh`,72,'Normal');
+  });
+
+  // Gastrocnemius
+  [-1,1].forEach(s=>{
+    const gas=lth(pCalf.map(v=>new THREE.Vector2(v.x*1.08,v.y)),null,11); gas.position.set(s*XL,Y.ankle,0);
+    addMuscle(g,gas,'Gastrocnemius',`${s<0?'Left':'Right'} calf · Plantarflexion`,71,'Fully recovered');
+  });
+
+  // Tibialis Anterior — front shin
+  [-1,1].forEach(s=>{
+    const tb=cyl(.068,.048,null,7);
+    orient(tb,s*(XL-.05),Y.knee-.06,.09,s*(XL-.06),Y.ankle+.06,.09);
+    addMuscle(g,tb,'Tibialis Anterior',`${s<0?'Left':'Right'} shin · Dorsiflexion`,68,'Normal');
+  });
+
+  // ── BACK MUSCLES ─────────────────────────────────────────────────────────
+  // RULE: since body is transparent (DoubleSide), back muscles must be INSIDE
+  // the body surface so they never protrude through the silhouette from any viewpoint.
+  // Each muscle z is LESS negative than the back surface at that height.
+  //
+  //  Height   backSurfaceZ   muscleZ (inside)
+  //  y=2.57:    -0.40         -0.34  (hip/lat lower)
+  //  y=2.90:    -0.30         -0.24  (waist/erectors)
+  //  y=3.06:    -0.34         -0.28  (lat main body)
+  //  y=3.19:    -0.37         -0.30  (erector mid)
+  //  y=3.38:    -0.42         -0.34  (rhomboids)
+  //  y=3.52:    -0.48         -0.40  (lower trap)
+  //  y=2.52:    -0.39         -0.32  (glutes)
+  // Thigh back:  -0.19         -0.13  (hamstrings)
+  // Calf back:   -0.13         -0.08  (soleus)
+
+  // Latissimus Dorsi
+  [-1,1].forEach(s=>{
+    const lat=sph(.245,null,9,7); lat.scale.set(.42,1.26,.46); lat.position.set(s*.28,3.06,-.28);
+    addMuscle(g,lat,'Latissimus Dorsi',`${s<0?'Left':'Right'} back · V-taper`,80,'Good tone');
+    // Lower lat
+    const lat2=sph(.160,null,7,5); lat2.scale.set(.40,.74,.44); lat2.position.set(s*.24,2.70,-.34);
+    lat2.material=makeMuscMat(); g.add(lat2);
+  });
+
+  // Erector Spinae — twin columns flanking spine
+  // x=±0.06, runs y=2.56→3.62 entirely at z=-0.28 (safely inside body at all heights above)
+  [-1,1].forEach(s=>{
+    const er=cyl(.060,.070,null,7);
+    orient(er,s*.06,2.58,-.28,s*.06,3.60,-.28);
+    addMuscle(g,er,'Erector Spinae',`${s<0?'Left':'Right'} column · Posture`,75,'Active');
+  });
+
+  // Rhomboids
+  [-1,1].forEach(s=>{
+    const rh=sph(.134,null,7,5); rh.scale.set(.68,.50,.44); rh.position.set(s*.13,3.38,-.34);
+    addMuscle(g,rh,'Rhomboids',`${s<0?'Left':'Right'} mid-back · Scapula`,70,'Adequate');
+  });
+
+  // Lower Trapezius
+  [-1,1].forEach(s=>{
+    const tl=sph(.156,null,7,5); tl.scale.set(.46,.76,.42); tl.position.set(s*.18,3.52,-.40);
+    tl.material=makeMuscMat(); g.add(tl);
+  });
+
+  // Gluteus Maximus
+  [-1,1].forEach(s=>{
+    const gl=sph(.200,null,9,7); gl.scale.set(.82,.88,.68); gl.position.set(s*.17,2.52,-.32);
+    addMuscle(g,gl,'Gluteus Maximus',`${s<0?'Left':'Right'} glute · Hip extension`,85,'Strong');
+  });
+
+  // Hamstrings — z=-0.13, thigh back surface at mid-height ≈ -0.19 → inside ✓
+  [-1,1].forEach(s=>{
+    const ham=cyl(.108,.090,null,7);
+    orient(ham,s*XL,Y.hip-.12,-.13,s*XL,Y.knee+.10,-.12);
+    addMuscle(g,ham,'Hamstrings',`${s<0?'Left':'Right'} rear thigh · Knee flexion`,68,'Normal');
+  });
+
+  // Soleus — z=-0.08, calf back ≈ -0.13 → inside ✓
+  [-1,1].forEach(s=>{
+    const sol=cyl(.082,.064,null,7);
+    orient(sol,s*XL,Y.ankle+.06,-.08,s*XL,Y.knee-.04,-.08);
+    addMuscle(g,sol,'Soleus',`${s<0?'Left':'Right'} deep calf · Endurance`,74,'Fully recovered');
+  });
+
+  // Assign default material to any muscle that got null during creation
+  // (addMuscle always assigns makeMuscMat(), so all are covered)
+
+})(aG);
+
+// ─── MUSCLE INTERACTION ──────────────────────────────────────────────────────
+function applyMuscleState(mesh, state){
+  if(!mesh) return;
+  const mat = mesh.material;
+  if(state==='default'){
+    mat.color.setHex(COL_DEFAULT); mat.emissive.setHex(0x000000);
+    mat.emissiveIntensity=0; mat.opacity=OP_DEFAULT;
+  } else if(state==='hover'){
+    mat.color.setHex(COL_HOVER); mat.emissive.setHex(0x7f0000);
+    mat.emissiveIntensity=0.22; mat.opacity=OP_HOVER;
+  } else if(state==='selected'){
+    mat.color.setHex(COL_SELECTED); mat.emissive.setHex(0xcc0000);
+    mat.emissiveIntensity=0.38; mat.opacity=OP_SELECTED;
+  }
+}
+
+// ─── INPUT HANDLING ───────────────────────────────────────────────────────────
+let isDrag=false, px=0, py=0, didDrag=false, curMode='normal';
+figure.rotation.y=0.18;
+
+cvWrap.addEventListener('mousedown',e=>{ isDrag=true; didDrag=false; px=e.clientX; py=e.clientY; });
+window.addEventListener('mousemove',e=>{
+  if(!isDrag) return;
+  const dx=e.clientX-px, dy=e.clientY-py;
+  if(Math.abs(dx)>3||Math.abs(dy)>3) didDrag=true;
+  figure.rotation.y+=(e.clientX-px)*.013;
+  figure.rotation.x=Math.max(-.46,Math.min(.46,figure.rotation.x+(e.clientY-py)*.008));
+  px=e.clientX; py=e.clientY;
+});
+window.addEventListener('mouseup',()=>{ isDrag=false; });
+
+cvWrap.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){ isDrag=true; didDrag=false; px=e.touches[0].clientX; py=e.touches[0].clientY; }
+  // Show tooltip on touch for anatomy mode
+  if(curMode==='anatomy'){
+    const hit=castMouse(e.touches[0].clientX, e.touches[0].clientY);
+    if(hit){
+      showTip(hit,e.touches[0].clientX, e.touches[0].clientY);
+      applyMuscleState(hit,'hover');
+    }
+  }
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(!isDrag||e.touches.length!==1) return;
+  const dx=e.touches[0].clientX-px, dy=e.touches[0].clientY-py;
+  if(Math.abs(dx)>5||Math.abs(dy)>5) didDrag=true;
+  figure.rotation.y+=(e.touches[0].clientX-px)*.015;
+  figure.rotation.x=Math.max(-.46,Math.min(.46,figure.rotation.x+(e.touches[0].clientY-py)*.009));
+  px=e.touches[0].clientX; py=e.touches[0].clientY;
+},{passive:true});
+window.addEventListener('touchend',e=>{
+  isDrag=false;
+  // Clear hover state
+  if(hoveredMesh && hoveredMesh !== selectedMesh){
+    applyMuscleState(hoveredMesh,'default');
+    hoveredMesh = null;
+  }
+  if(!didDrag&&e.changedTouches.length===1&&curMode==='anatomy'){
+    handleClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY, true);
+  }
+});
+
+cvWrap.addEventListener('scroll',e=>e.preventDefault(),{passive:false});
+cvWrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  camera.position.z=Math.max(4.5,Math.min(13,camera.position.z+e.deltaY*.01));
+},{passive:false});
+
+// Raycasting
+const RC=new THREE.Raycaster(), m2=new THREE.Vector2();
+const tipEl=document.getElementById('tip');
+let tipX=0,tipY=0;
+
+function castMouse(cx,cy){
+  const r=canvas.getBoundingClientRect();
+  m2.x=((cx-r.left)/r.width)*2-1;
+  m2.y=-((cy-r.top)/r.height)*2+1;
+  RC.setFromCamera(m2,camera);
+  const hits=RC.intersectObjects(muscleMeshes,false);
+  return hits.length?hits[0].object:null;
+}
+
+function showTip(mesh,cx,cy){
+  const u=mesh.userData;
+  document.getElementById('tn').textContent=u.name;
+  document.getElementById('ts').textContent=u.sub;
+  document.getElementById('tb').style.width=u.pct+'%';
+  document.getElementById('tt').textContent=u.status;
+  document.getElementById('tclick').textContent=u.isSelected?'Click to deselect':'Click to select';
+  const tw=tipEl.offsetWidth,th_=tipEl.offsetHeight,
+        vw=window.innerWidth,vh=window.innerHeight;
+  let x=cx+16,y=cy+16;
+  if(x+tw>vw-8)x=cx-tw-16;
+  if(y+th_>vh-8)y=cy-th_-16;
+  tipEl.style.left=x+'px'; tipEl.style.top=y+'px';
+  tipEl.classList.add('show');
+}
+
+function handleClick(cx,cy,isTouch=false){
+  const hit=castMouse(cx,cy);
+  if(hit){
+    if(selectedMesh&&selectedMesh!==hit){
+      selectedMesh.userData.isSelected=false;
+      applyMuscleState(selectedMesh,'default');
+    }
+    if(hit.userData.isSelected){
+      hit.userData.isSelected=false;
+      applyMuscleState(hit,'default');
+      selectedMesh=null;
+      tipEl.classList.remove('show');
+    } else {
+      hit.userData.isSelected=true;
+      applyMuscleState(hit,'selected');
+      selectedMesh=hit;
+      if(isTouch) showTip(hit,cx,cy);
+    }
+  } else {
+    if(selectedMesh){ selectedMesh.userData.isSelected=false; applyMuscleState(selectedMesh,'default'); selectedMesh=null; }
+    tipEl.classList.remove('show');
+  }
+}
+
+cvWrap.addEventListener('click',e=>{ if(!didDrag&&curMode==='anatomy') handleClick(e.clientX,e.clientY,false); });
+
+cvWrap.addEventListener('mousemove',e=>{
+  if(isDrag||curMode!=='anatomy') return;
+  tipX=e.clientX; tipY=e.clientY;
+  const hit=castMouse(e.clientX,e.clientY);
+
+  // Update hover state
+  if(hoveredMesh&&hoveredMesh!==hit&&hoveredMesh!==selectedMesh){
+    applyMuscleState(hoveredMesh,'default'); hoveredMesh=null;
+  }
+  if(hit&&hit!==selectedMesh){
+    applyMuscleState(hit,'hover');
+    hoveredMesh=hit;
+    showTip(hit,e.clientX,e.clientY);
+  } else if(!hit){
+    hoveredMesh=null;
+    if(!selectedMesh) tipEl.classList.remove('show');
+    else {
+      // Keep tip showing the selected muscle info near mouse
+      // Actually hide tip when not hovering
+      tipEl.classList.remove('show');
+    }
+  }
+  if(hit) canvas.style.cursor='pointer';
+  else canvas.style.cursor='';
+});
+
+cvWrap.addEventListener('mouseleave',()=>{
+  if(hoveredMesh&&hoveredMesh!==selectedMesh){ applyMuscleState(hoveredMesh,'default'); hoveredMesh=null; }
+  tipEl.classList.remove('show');
+  canvas.style.cursor='';
+});
+
+// Resize
+function resize(){
+  const wrap = cvWrap;
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  renderer.setSize(w, h, false);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.style.marginLeft = '0';
+  canvas.style.marginTop = '0';
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize); resize();
+
+// Mode toggle
+function setMode(m){
+  curMode=m;
+  if(m==='anatomy'){
+    nG.visible=false; aG.visible=true;
+    document.getElementById('btn-n').classList.remove('on');
+    document.getElementById('btn-a').classList.add('on','anat');
+  } else {
+    aG.visible=false; nG.visible=true;
+    document.getElementById('btn-a').classList.remove('on','anat');
+    document.getElementById('btn-n').classList.add('on');
+    tipEl.classList.remove('show');
+    // Reset all muscle states
+    if(selectedMesh){ selectedMesh.userData.isSelected=false; applyMuscleState(selectedMesh,'default'); selectedMesh=null; }
+    if(hoveredMesh){ applyMuscleState(hoveredMesh,'default'); hoveredMesh=null; }
+  }
+}
+
+// ─── RENDER LOOP ─────────────────────────────────────────────────────────────
+function frame(){ requestAnimationFrame(frame); renderer.render(scene,camera); }
+frame();
+</script>
+</body>
+</html>
