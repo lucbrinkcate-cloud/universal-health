@@ -8,13 +8,11 @@
       }
     }
   ],
-  "routes": [
+  "overrides": [
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": ".*",
-      "dest": "/index.html"
+      "files": "package.json",
+      "method": "POST",
+      "path": "/api/build"
     }
   ]
 }
