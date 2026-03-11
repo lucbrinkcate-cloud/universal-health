@@ -8,22 +8,27 @@ import {
 import { AvataaarsAvatar } from './avatar/AvataaarsAvatar';
 import { AvatarEditor } from './avatar/AvatarEditor';
 import { useAvatarStore } from '../stores/avatarStore';
-import { useGamificationStore } from '../stores';
+import { useGamificationStore, useAuthStore } from '../stores';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants';
 import { calculateOverallMuscleHealth, getRecommendedMuscles } from '../utils/muscleTracker';
 
 interface AvatarHeroCardProps {
   onCustomize?: () => void;
   useZAnatomy?: boolean;
+  customName?: string;
 }
 
 type ViewMode = 'avatar' | 'muscles';
 
-export const AvatarHeroCard: React.FC<AvatarHeroCardProps> = ({ onCustomize, useZAnatomy = false }) => {
+export const AvatarHeroCard: React.FC<AvatarHeroCardProps> = ({ onCustomize, useZAnatomy = false, customName }) => {
   const { muscleGroups } = useAvatarStore();
   const { avatar } = useGamificationStore();
+  const { user } = useAuthStore();
   const [showEditor, setShowEditor] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('avatar');
+
+  const userName = customName || user?.displayName || user?.email?.split('@')[0] || 'User';
+  const firstName = userName.split(' ')[0];
   
   const muscleHealth = calculateOverallMuscleHealth(muscleGroups);
   const recommendedMuscles = getRecommendedMuscles(muscleGroups);
@@ -46,7 +51,7 @@ export const AvatarHeroCard: React.FC<AvatarHeroCardProps> = ({ onCustomize, use
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Your Digital Twin</Text>
+          <Text style={styles.title}>{firstName}'s Digital Twin</Text>
           <Text style={styles.subtitle}>
             {viewMode === 'avatar' ? 'Tap for Muscles Anatomy' : 'Muscles Anatomy'}
           </Text>

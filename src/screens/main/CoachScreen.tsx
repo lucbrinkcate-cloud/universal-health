@@ -12,6 +12,7 @@ import {
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants';
 import { useNutritionStore } from '../../stores/nutritionStore';
 import { useHealthStore } from '../../stores';
+import { useCycleStore } from '../../stores/cycleStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -33,7 +34,7 @@ interface InsightCard {
   color: string;
 }
 
-const QUICK_PROMPTS = [
+const DEFAULT_QUICK_PROMPTS = [
   'How am I doing?',
   'Should I work out?',
   'Meal suggestions',
@@ -67,8 +68,11 @@ export const CoachScreen: React.FC = () => {
 
   const { getTotalNutrition, goal: nutritionGoal } = useNutritionStore();
   const { healthData } = useHealthStore();
+  const { settings, getPredictions, getCurrentPhase } = useCycleStore();
 
   const totals = getTotalNutrition();
+  const cyclePredictions = getPredictions();
+  const currentCyclePhase = getCurrentPhase();
 
   const generateResponse = (query: string): string => {
     const lowerQuery = query.toLowerCase();
@@ -123,6 +127,98 @@ Tip: Schedule workouts before 7PM and add a 10-min wind-down routine. Avoiding s
 3. 10k Steps — Behind (8,420 avg). Add a lunch walk!
 
 You're making solid progress. Small consistent actions compound into big results! 🚀`;
+    }
+
+    // Cycle tracker responses
+    if (lowerQuery.includes('cycle') || lowerQuery.includes('period') || lowerQuery.includes('menstrual') || lowerQuery.includes('fertile') || lowerQuery.includes('ovulation')) {
+      if (!settings.isEnabled) {
+        return `🌸 Cycle Tracker:
+
+⚙️ Status: Not Configured (Gender: Male)
+
+The cycle tracking feature is currently disabled. To enable it:
+1. Go to your Profile tab
+2. Find "Cycle Tracker" 
+3. Set your cycle length and period length
+
+This feature is designed for female users to track their menstrual cycle, predict periods, and identify fertile windows. It helps with:
+• Period prediction
+• Fertile window estimation  
+• Cycle regularity tracking
+• Symptom logging
+
+Would you like me to help you set it up?`;
+      }
+
+      const phaseEmojis: Record<string, string> = {
+        menstruation: '🩸',
+        fertile: '🌸',
+        ovulation: '🥚',
+        luteal: '🌙',
+        not_configured: '⚙️',
+      };
+
+      const phaseNames: Record<string, string> = {
+        menstruation: 'Menstruation',
+        fertile: 'Fertile Window',
+        ovulation: 'Ovulation',
+        luteal: 'Luteal Phase',
+        not_configured: 'Not Configured',
+      };
+
+      const currentPhase = currentCyclePhase || 'not_configured';
+      const emoji = phaseEmojis[currentPhase] || '📊';
+      const phaseName = phaseNames[currentPhase] || 'Unknown';
+
+      let response = `🌸 Cycle Insights:
+
+📍 Current Phase: ${emoji} ${phaseName}
+📅 Cycle Length: ${settings.cycleLength} days
+🩸 Period Length: ${settings.periodLength} days`;
+
+      if (cyclePredictions) {
+        response += `
+
+📆 Predictions:
+• Next Period: ${new Date(cyclePredictions.nextPeriod).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+• Ovulation: ${new Date(cyclePredictions.ovulationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+• Fertile Window: ${new Date(cyclePredictions.nextFertileWindow.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(cyclePredictions.nextFertileWindow.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      }
+
+      if (currentPhase === 'menstruation') {
+        response += `
+
+💡 Tips: Rest and stay hydrated. Light exercise like walking or yoga is recommended.`;
+      } else if (currentPhase === 'fertile' || currentPhase === 'ovulation') {
+        response += `
+
+💡 Tips: High energy levels! Great time for intense workouts.`;
+      } else if (currentPhase === 'luteal') {
+        response += `
+
+💡 Tips: Energy may vary. Listen to your body. Moderate intensity is ideal.`;
+      }
+
+      return response;
+    }
+
+    if (lowerQuery.includes('enable cycle') || lowerQuery.includes('setup cycle') || lowerQuery.includes('configure cycle')) {
+      return `🌸 To enable cycle tracking:
+
+1. Go to the Profile tab
+2. Find the "Cycle Tracker" section
+3. Tap the ⚙️ settings icon
+4. Enter your cycle length (typically 21-35 days, avg 28)
+5. Enter your period length (typically 3-7 days, avg 5)
+6. Tap "Save Settings"
+
+Once configured, you can:
+• Log daily symptoms
+• Track flow intensity
+• Get period predictions
+• Identify fertile windows
+
+Would you like more help setting this up?`;
     }
 
     return `🤖 Great question! Based on your current data (Health Score: 78/100, ${healthData?.steps || 8420} steps today), you're making solid progress. What specific area would you like to explore? Try asking about workouts, nutrition, sleep, or your goals.`;
@@ -267,7 +363,7 @@ You're making solid progress. Small consistent actions compound into big results
 
           {/* Quick Prompts */}
           <View style={styles.quickPrompts}>
-            {QUICK_PROMPTS.map((prompt) => (
+            {[...DEFAULT_QUICK_PROMPTS, ...(settings.isEnabled ? ['Cycle insights'] : ['Enable cycle tracking'])].map((prompt) => (
               <Pressable
                 key={prompt}
                 style={styles.quickPromptButton}
